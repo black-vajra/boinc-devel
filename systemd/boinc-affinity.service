@@ -1,0 +1,18 @@
+[Unit]
+Description=BOINC CPU Affinity Manager
+After=boinc-client.service
+
+[Service]
+Type=simple
+ExecStartPre=/bin/sleep 5
+ExecStart=/usr/local/bin/boinc_affinity.sh
+Restart=always
+RestartSec=15
+AmbientCapabilities=CAP_SYS_NICE
+CapabilityBoundingSet=CAP_SYS_NICE
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=boinc-affinity
+
+[Install]
+WantedBy=multi-user.target
