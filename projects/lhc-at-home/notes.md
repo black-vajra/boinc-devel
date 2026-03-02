@@ -1,3 +1,5 @@
+Replace the contents of /home/pepper/boinc-devel/projects/lhc-at-home/notes.md with this:
+
 LHC@home — Configuration, Quirks, and Workarounds
 System: pots (14-core AMD, Kubuntu, BOINC 8.2.8)
 Last updated: March 2, 2026
@@ -14,7 +16,7 @@ After=docker.service
 Requires=docker.service
 ```
 
-**Caveat:** On this system BOINC is started manually following the procedure shown in `~/start-boinc-procedure`, not via systemctl. This dependency is therefore advisory only.
+**Caveat:** On this system BOINC is started manually via `~/start.sh`, not via systemctl. This dependency is therefore advisory only.
 
 ---
 
@@ -37,8 +39,16 @@ Seccomp — --security-opt seccomp=unconfined did not fix it; confirmed capabili
 docker_container_options in cc_config.xml — silently ignored in BOINC 8.2.8 (see Section 4)
 
 Solution — Docker Wrapper Script
-A wrapper at /usr/bin/docker intercepts container creation and injects --privileged. Real binary moved to /usr/bin/docker.real.
+The real Docker binary was moved to /usr/bin/docker.real. A wrapper at /usr/bin/docker intercepts run and create commands, injecting --privileged and --user 122:127 (boinc uid:gid). All invocations are logged to /tmp/docker-wrapper.log for debugging.
+bash#!/bin/bash
+echo "$(date) args: $@" >> /tmp/docker-wrapper.log
+if [ "$1" = "run" ] || [ "$1" = "create" ]; then
+    /usr/bin/docker.real "$1" --privileged --user 122:127 "${@:2}"
+else
+    /usr/bin/docker.real "$@"
+fi
 Security note: --privileged grants full host capabilities. Acceptable here because containers originate from CERN. Monitor upstream for a proper fix.
+Note on --user 122:127: This is the boinc:boinc uid:gid on this system. Verify with id boinc before deploying on another machine — the values will likely differ.
 
 3. Output File Ownership — root:root vs boinc:boinc
 Problem
@@ -46,7 +56,21 @@ Tasks ran to 100% then failed at upload. BOINC could not move output.tgz from sl
 Root Cause
 Docker 29 causes output files written inside containers to be owned root:root on the host instead of boinc:boinc. BOINC runs as the boinc user and cannot move root-owned files.
 Solution — Chown Janitor Service
-A systemd service + timer pair periodically corrects ownership. Runs every 2 minutes, targeting /var/lib/boinc-client/slots/ and /var/lib/boinc-client/projects/.
+A self-looping systemd service (boinc-chown.service) runs as root and corrects ownership of output.tgz in all slot shared directories every 30 seconds:
+ini[Unit]
+Description=Fix BOINC LHC@home output file ownership
+After=boinc-client.service
+
+[Service]
+Type=simple
+User=root
+ExecStart=/bin/bash -c 'while true; do chown boinc:boinc /var/lib/boinc-client/slots/*/shared/output.tgz 2>/dev/null; sleep 30; done'
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+Enable with:
+bashsudo systemctl enable --now boinc-chown.service
 
 4. cc_config.xml docker_container_options — Silently Ignored
 BOINC 8.2.8 does not implement the <docker_container_options> directive despite it being documented. It is parsed but never passed to the Docker invocation. The wrapper script in Section 2 exists because of this. Bug filed on BOINC GitHub.
@@ -65,9 +89,19 @@ Pattern-based detection in boinc_affinity.sh via get_atlas_pids()
 PhaseSettingReasonPhase 4 (Feb 25)KillMode=processAllow BOINC to flush state cleanly before dyingPhase 6 (Mar 1)KillMode=control-groupGuarantee CVMFS-escaped ATLAS processes are killed
 
 Current Status (March 2, 2026)
-ComponentStatusDocker wrapper (--privileged)✅ ActiveChown janitor service✅ ActiveKillMode=control-group✅ ActiveATLAS orphan pkill in start.sh✅ Activedocker_container_options in cc_config.xml❌ Silently ignoredLHC@home tasks completing + uploading✅ Confirmed stable
+ComponentStatusDocker wrapper (--privileged + --user 122:127)✅ ActiveChown janitor service (30s loop)✅ ActiveKillMode=control-group✅ ActiveATLAS orphan pkill in start.sh✅ Activedocker_container_options in cc_config.xml❌ Silently ignoredLHC@home tasks completing + uploading✅ Confirmed stable
 
-Upstream Bug Reports Pending
+Files in This Directory
+FileDescriptiondocker-wrapper/usr/bin/docker intercept script (real binary at /usr/bin/docker.real)boinc-chown.serviceSelf-looping chown service, runs every 30snotes.mdThis file
+
+Upstream Bug Reports Filed
 
 LHC@home forums — docker-ce 29.x / BOINC 8.2.8 tmpfs incompatibility
 BOINC GitHub — docker_container_options silently ignored in BOINC 8.2.8
+
+
+Once that's saved, run the commit:
+bashcd /home/pepper/boinc-devel
+git add projects/lhc-at-home/
+git commit -m "Add LHC@home docker wrapper, chown service, and corrected notes"
+git push Sonnet 4.6ExtendedClaude is AI and can make mistakes. Please double-check responses.
