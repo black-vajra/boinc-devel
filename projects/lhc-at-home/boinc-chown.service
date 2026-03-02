@@ -1,0 +1,12 @@
+[Unit]
+Description=Fix BOINC LHC@home output file ownership
+After=boinc-client.service
+
+[Service]
+Type=simple
+User=root
+ExecStart=/bin/bash -c 'while true; do chown boinc:boinc /var/lib/boinc-client/slots/*/shared/output.tgz 2>/dev/null; sleep 30; done'
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

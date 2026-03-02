@@ -1,0 +1,7 @@
+#!/bin/bash
+echo "$(date) args: $@" >> /tmp/docker-wrapper.log
+if [ "$1" = "run" ] || [ "$1" = "create" ]; then
+    /usr/bin/docker.real "$1" --privileged --user 122:127 "${@:2}"
+else
+    /usr/bin/docker.real "$@"
+fi
