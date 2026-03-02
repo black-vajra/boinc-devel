@@ -1,0 +1,17 @@
+# BOINC sensitive / runtime files — never commit these
+gui_rpc_auth.cfg
+client_state.xml
+lockfile
+time_stats_log
+job_log_*.txt
+notices/
+
+# Editor debris
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Backup files
+*.bak
+*.orig

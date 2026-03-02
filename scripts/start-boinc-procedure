@@ -1,0 +1,8 @@
+sudo pkill -f "runargs.EVNTtoHITS" 2>/dev/null
+sudo pkill -f "EVNTtoHITS" 2>/dev/null
+sudo boinc --redirectio &   # needs root for /var/lib/boinc-client
+sleep 3
+boincmgr &                  # runs as your user - no sudo needed
+(cd /var/lib/boinc-client && boinccmd --set_run_mode auto)
+sudo systemctl start boinc-affinity.service
+sudo journalctl -u boinc-affinity.service -f
