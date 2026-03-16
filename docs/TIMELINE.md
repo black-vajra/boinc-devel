@@ -265,3 +265,97 @@ sudo systemctl start boinc-affinity.service
 - **Affinity script loses worker names** — `get_binary_name()` can't read `/proc/<root_pid>/exe` without sudo, so ATLAS processes show as `''` in logs (cosmetic only)
 - **MilkyWay and LHC taking turns** — BOINC scheduler round-robins between them because both want most of the machine; `app_config.xml` per-project CPU limits could allow true coexistence
 - **boincmgr SVG warnings** — `libpixbufloader-svg-CRITICAL: rsvg_handle_get_pixbuf_sub: assertion 'handle != NULL' failed` — cosmetic, missing icon assets in BOINC manager build
+
+---
+
+## Phase 9 — Docker Wrapper Overwrite & VirtualBox Group Fix
+**March 16, 2026**
+
+### Problem 1: LHC@home computation errors after docker-ce update
+
+All LHC@home tasks failing with computation errors. Project stopped requesting
+new tasks (BOINC automatic backoff after consecutive failures).
+
+### Root Cause
+`apt upgrade` updated docker-ce from 29.2.1 → 29.3.0, overwriting the wrapper
+script at `/usr/bin/docker` with the real docker binary. The `--privileged`
+injection was no longer happening, causing the same tmpfs mount failure as the
+original Phase 2 issue.
+
+### Solution — dpkg-divert for permanent protection
+
+Previous approach (apt-mark hold) prevents upgrades but doesn't survive
+`apt install docker-ce` or intentional unhold. Replaced with `dpkg-divert`:
+
+```bash
+# Register divert — future docker-ce installs go to docker.real
+dpkg-divert --add --no-rename --divert /usr/bin/docker.real /usr/bin/docker
+
+# Wrapper stays at /usr/bin/docker, updated real binary lands at /usr/bin/docker.real
+```
+
+Verified by reinstalling docker-ce with `apt-get install --reinstall docker-ce`
+and confirming wrapper survived intact. The docker_wrapper.sh was also committed
+to the repo (previously missing).
+
+**Deployment note for other admins:**
+- Deploy wrapper to `/usr/bin/docker`
+- Move real binary to `/usr/bin/docker.real`
+- Register divert: `dpkg-divert --add --no-rename --divert /usr/bin/docker.real /usr/bin/docker`
+- Remove divert: `dpkg-divert --remove --no-rename /usr/bin/docker`
+
+---
+
+### Problem 2: boinc user missing from vboxusers group
+
+Investigation of LHC@home's dual runtime (Docker for ATLAS tasks, VirtualBox for
+CMS tasks) revealed the `boinc` system user was not in the `vboxusers` group.
+CMS tasks requiring VBoxHeadless would fail to launch.
+
+Confirmed: `sudo -u boinc VBoxManage list vms` returned permission error.
+
+Groups present: `boinc video render docker` — `vboxusers` missing.
+
+### Solution
+```bash
+sudo usermod -aG vboxusers boinc
+```
+
+Restarted BOINC to pick up new group membership. Verified with `id boinc`.
+
+**Note:** Since boinc is currently started as root (via `sudo boinc --redirectio`),
+group membership is academic for the current setup — root bypasses group checks.
+This fix becomes relevant if BOINC is ever switched to running as the `boinc`
+system user.
+
+---
+
+### Problem 3: stop-boinc-procedure not killing boinc or boincmgr
+
+`pkill boinc` and `pkill boincmgr` in the stop script had no effect.
+
+### Root Cause
+Script was being run as `pepper` without sudo. Since `boinc` runs as root
+(started via `sudo boinc --redirectio`), an unprivileged pkill cannot signal it.
+
+Additionally the script was using `--passwd $(cat /path/to/gui_rpc_auth.cfg)`
+for boinccmd authentication rather than the correct subshell CWD pattern.
+
+### Solution
+Added `sudo` to all pkill calls. Reverted boinccmd to the established subshell
+pattern:
+```bash
+(cd /var/lib/boinc-client && boinccmd --set_run_mode never)
+```
+
+---
+
+### Key Learnings from Phase 9
+
+- `dpkg-divert` is the correct long-term solution for owning a system binary that
+  packages want to manage. `apt-mark hold` is a temporary measure only.
+- LHC@home requires the boinc user in **both** `docker` and `vboxusers` groups
+  for full functionality — ATLAS tasks use Docker, CMS tasks use VirtualBox. This
+  is not documented clearly anywhere in the LHC@home or BOINC documentation.
+- When boinc runs as root, `pkill` without sudo silently fails — the stop script
+  must use `sudo pkill` for both `boinc` and `boincmgr`.

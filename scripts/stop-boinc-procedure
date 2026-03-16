@@ -1,8 +1,7 @@
-
-cd /home/pepper
-boinccmd --host localhost --passwd $(cat /home/pepper/gui_rpc_auth.cfg) --set_run_mode never
+#!/bin/bash
+(cd /var/lib/boinc-client && boinccmd --set_run_mode never)
 sleep 10
-pkill boincmgr
-pkill boinc
-
 sudo systemctl stop boinc-affinity.service
+sudo pkill boincmgr
+sudo pkill boinc
+sudo pkill -f "runargs.EVNTtoHITS" 2>/dev/null
