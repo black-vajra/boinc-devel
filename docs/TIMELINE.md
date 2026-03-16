@@ -58,8 +58,7 @@ Two-part fix:
 2. **Systemd service** that periodically `chown`s output files back to `boinc:boinc`
 
 ### Outcome
-LHC@home tasks completing successfully with proper upload and credit allocation. Bug reports filed on LHC@home forums and BOINC GitHub documenting the docker-ce compatibility issue.
-
+Bug reports and community documentation deferred. Forum posts and BOINC GitHub issue filed March 16, 2026 (see Phase 9).
 ---
 
 ## Phase 3 — Global Preference Override Mystery
@@ -359,3 +358,20 @@ pattern:
   is not documented clearly anywhere in the LHC@home or BOINC documentation.
 - When boinc runs as root, `pkill` without sudo silently fails — the stop script
   must use `sudo pkill` for both `boinc` and `boincmgr`.
+
+---
+
+### Community Outreach — March 16, 2026
+
+Following resolution of the Phase 9 issues, bug reports and community documentation
+were filed:
+
+**BOINC GitHub Issue:**
+- `docker_container_options` in cc_config.xml silently ignored — no way to pass
+  `--privileged` to LHC@home containers (BOINC 8.2.8)
+- URL: https://github.com/BOINC/boinc/issues/6914
+
+**LHC@home Forum Posts (pending):**
+- Thread 1: docker-ce 29.x breaks ATLAS tasks: tmpfs mount failure and the fix
+- Thread 2: LHC@home silent task failures: boinc user missing docker and vboxusers group membership
+- Thread 3: ATLAS jobs survive BOINC client restart: CVMFS orphan processes pegging CPU cores and the fix
