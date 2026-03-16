@@ -8,9 +8,9 @@ BOINC administration, configuration, and documentation for **pots** — a 14-cor
 |------|--------|
 | Hostname | pots |
 | OS | Kubuntu (KDE Plasma, X11) |
-| CPU | 14-core AMD (7 physical × 2 threads) |
+| CPU | 14-core Intel (7 physical × 2 threads) |
 | RAM | 30.8 GiB |
-| GPU | AMD (amdgpu-pci-0300, OpenCL) |
+| GPU | Radeon (amdgpu-pci-0300, OpenCL) |
 | BOINC | 8.2.8 |
 
 ## Active Projects
