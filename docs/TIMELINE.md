@@ -1,6 +1,6 @@
 # BOINC Administration Timeline — pots
 *Chronological troubleshooting and development history*
-*Machine: Kubuntu, 14-core AMD, 30.8 GiB RAM, AMD GPU, BOINC 8.2.8*
+*Machine: Kubuntu, Intel Core Ultra 5 245K, 30.8 GiB RAM, AMD GPU, BOINC 8.2.8*
 *Projects: Einstein@Home, LHC@home, MilkyWay@home, Asteroids@home*
 
 ---

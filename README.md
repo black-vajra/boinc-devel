@@ -1,6 +1,6 @@
 # boinc-devel
 
-BOINC administration, configuration, and documentation for **pots** — a 14-core AMD Kubuntu workstation running multiple distributed computing projects simultaneously.
+BOINC administration, configuration, and documentation for **pots** — an Intel Core Ultra 5 245K Kubuntu workstation running multiple distributed computing projects simultaneously.
 
 ## System Profile
 
@@ -8,7 +8,7 @@ BOINC administration, configuration, and documentation for **pots** — a 14-cor
 |------|--------|
 | Hostname | pots |
 | OS | Kubuntu (KDE Plasma, X11) |
-| CPU | 14-core Intel (7 physical × 2 threads) |
+| CPU | Intel Core Ultra 5 245K (7 physical × 2 threads) |
 | RAM | 30.8 GiB |
 | GPU | Radeon (amdgpu-pci-0300, OpenCL) |
 | BOINC | 8.2.8 |
