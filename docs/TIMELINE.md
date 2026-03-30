@@ -375,3 +375,17 @@ were filed:
 - Thread 1: docker-ce 29.x breaks ATLAS tasks: tmpfs mount failure and the fix
 - Thread 2: LHC@home silent task failures: boinc user missing docker and vboxusers group membership
 - Thread 3: ATLAS jobs survive BOINC client restart: CVMFS orphan processes pegging CPU cores and the fix
+
+---
+
+## Operational Note — March 30, 2026
+
+### Project Consolidation
+All projects removed from pots except LHC@home. Einstein@Home, MilkyWay@home, and Asteroids@home have been detached. LHC@home is now the sole active project.
+
+### Preference Tuning
+Two values updated in `global_prefs_override.xml`:
+- `suspend_cpu_usage`: 25% → 35% — prevents BOINC suspending during normal desktop use
+- `ram_max_used_busy_pct`: 50% → 25% (~7.7 GiB ceiling) — discourages scheduler from launching a second ATLAS task while one is already running
+
+Both changes applied via `sed` and reloaded with `boinccmd --read_global_prefs_override`.
