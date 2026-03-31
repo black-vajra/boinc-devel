@@ -389,3 +389,41 @@ Two values updated in `global_prefs_override.xml`:
 - `ram_max_used_busy_pct`: 50% → 25% (~7.7 GiB ceiling) — discourages scheduler from launching a second ATLAS task while one is already running
 
 Both changes applied via `sed` and reloaded with `boinccmd --read_global_prefs_override`.
+
+---
+
+## Phase 10 — Project Consolidation & ATLAS Concurrency Lock
+**March 31, 2026**
+
+### Problem: LHC@home refusing to run alongside other projects
+LHC@home posting computation errors; project reset required. Concurrent
+ATLAS tasks (2x simultaneous) saturating CPU and exceeding RAM ceiling
+despite `ram_max_used_busy_pct=25` (~7.7 GiB target). Observed 699%
+combined CPU usage, 9.9 GiB RAM consumed.
+
+### Decision
+Removed all projects except LHC@home. RAM preference alone proved
+insufficient as a concurrency guardrail for ATLAS tasks.
+
+### Solution
+Deployed `app_config.xml` to project directory with `max_concurrent 1`
+for ATLAS app:
+```xml
+<app_config>
+    <app>
+        <name>ATLAS</name>
+        <max_concurrent>1</max_concurrent>
+    </app>
+</app_config>
+```
+
+Note: `boinccmd --read_app_config` does not exist in BOINC 8.2.9.
+`--get_app_config` returns "not found" error despite file being present
+and readable — appears to be a client bug. Config confirmed active via
+observed behavior: single ATLAS task running, others queued as "Waiting
+to run." RAM stabilized at 7.5 GiB.
+
+### Outcome
+Single ATLAS task running at ~306% CPU across cores 12-13. Theory
+Simulation tasks queued. GPU task requests suppressed (no Einstein@Home).
+System stable.
