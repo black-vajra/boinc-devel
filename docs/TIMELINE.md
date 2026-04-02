@@ -427,3 +427,36 @@ to run." RAM stabilized at 7.5 GiB.
 Single ATLAS task running at ~306% CPU across cores 12-13. Theory
 Simulation tasks queued. GPU task requests suppressed (no Einstein@Home).
 System stable.
+
+---
+
+## Phase 11 — Data Directory Ambiguity Fix
+**April 2, 2026**
+
+### Problem: start-boinc-procedure sometimes launched Einstein@Home
+Running `./start-boinc-procedure` occasionally opened BOINC with the old
+multi-project state (Einstein@Home, MilkyWay@home still present) instead
+of the clean LHC-only configuration.
+
+### Root Cause
+`boinc` without `--dir` uses its CWD as the data directory. The script
+launched boinc differently depending on invocation context, resolving to
+either `/home/pepper/` (correct) or `/var/lib/boinc-client/` (stale).
+Confirmed via `/proc/<pid>/cwd` symlink inspection.
+
+Two separate `client_state.xml` files existed:
+- `/home/pepper/client_state.xml` — LHC@home only (correct)
+- `/var/lib/boinc-client/client_state.xml` — Einstein@Home + LHC + MilkyWay (stale)
+
+The `boinccmd` subshell in both start and stop scripts also referenced
+`/var/lib/boinc-client/` — wrong directory for `gui_rpc_auth.cfg`.
+
+### Solution
+- Added `--dir /home/pepper` to the `boinc` invocation in start-boinc-procedure
+- Updated `boinccmd` subshell in both scripts to `cd /home/pepper`
+- Renamed `/var/lib/boinc-client/client_state.xml` → `client_state.xml.stale`
+
+### Key Learning
+Always pin `--dir` explicitly in the boinc invocation. Never rely on CWD.
+Diagnose data directory issues with `/proc/<pid>/cwd` + `grep master_url`
+on candidate `client_state.xml` files.

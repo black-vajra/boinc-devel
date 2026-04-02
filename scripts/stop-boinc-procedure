@@ -1,5 +1,6 @@
 #!/bin/bash
-(cd /var/lib/boinc-client && boinccmd --set_run_mode never)
+##(cd /var/lib/boinc-client && boinccmd --set_run_mode never)
+(cd /home/pepper && boinccmd --set_run_mode never)
 sleep 10
 sudo systemctl stop boinc-affinity.service
 sudo pkill boincmgr
