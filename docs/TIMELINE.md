@@ -502,3 +502,7 @@ BOINC GitHub issue #6957 — docker_wrapper: infinite loop on container exit + m
 
 ### Current Operational Status
 LHC@home suspended pending resolution of BOINC issue #6957. Einstein@Home and MilkyWay@home re-enabled and running normally. GPU active on Einstein@Home OpenCL tasks. Will resume LHC@home Theory tasks once upstream docker_wrapper fix is available and deployed by LHC@home.
+
+### GitHub Discussion Filed
+BOINC GitHub Discussion #6958 — Proposal: Zero-Config Volunteer Computing for LHC@home
+https://github.com/BOINC/boinc/discussions/6958
