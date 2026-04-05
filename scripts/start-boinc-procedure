@@ -1,4 +1,7 @@
 #!/bin/bash
+sudo pkill -x boinc 2>/dev/null
+sudo pkill boincmgr 2>/dev/null
+sleep 3
 sudo pkill -f "runargs.EVNTtoHITS" 2>/dev/null
 sudo pkill -f "EVNTtoHITS" 2>/dev/null
 sudo boinc --redirectio --dir /home/pepper &
@@ -6,5 +9,6 @@ sleep 3
 boincmgr &
 ##(cd /var/lib/boinc-client && boinccmd --set_run_mode auto)
 (cd /home/pepper && boinccmd --set_run_mode auto)
+(cd /home/pepper && boinccmd --set_gpu_mode auto)
 sudo systemctl start boinc-affinity.service
 journalctl -fu boinc-affinity.service
