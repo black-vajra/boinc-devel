@@ -1,6 +1,10 @@
 <app_config>
-    <app>
-        <name>ATLAS</name>
-        <max_concurrent>1</max_concurrent>
-    </app>
+  <app>
+    <name>ATLAS</name>
+    <max_concurrent>1</max_concurrent>
+  </app>
+  <app>
+    <name>Theory</name>
+    <max_concurrent>0</max_concurrent>
+  </app>
 </app_config>

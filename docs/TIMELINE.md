@@ -460,3 +460,16 @@ The `boinccmd` subshell in both start and stop scripts also referenced
 Always pin `--dir` explicitly in the boinc invocation. Never rely on CWD.
 Diagnose data directory issues with `/proc/<pid>/cwd` + `grep master_url`
 on candidate `client_state.xml` files.
+
+---
+
+## Phase 12 — Theory Simulation Docker Failures & Bug Filing
+**April 5, 2026**
+
+### Problem: Theory Simulation tasks stuck at 100%, never uploading
+All LHC@home Theory Simulation tasks completing computation but never transitioning to upload state. Tasks showed 100% progress and "Running" status indefinitely — confirmed persisting overnight (12+ hours) without resolution.
+
+### Root Causes Identified
+
+**1. docker_wrapper_18 infinite loop on container exit**
+When a Theory Simulation container finishes and exits, docker_wrapper_18 fails to detect the exit condition. Instead of collecting output and reporting completion, it enters an infinite loop issuing pause/unpause commands against the dead container:
