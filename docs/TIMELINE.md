@@ -473,3 +473,32 @@ All LHC@home Theory Simulation tasks completing computation but never transition
 
 **1. docker_wrapper_18 infinite loop on container exit**
 When a Theory Simulation container finishes and exits, docker_wrapper_18 fails to detect the exit condition. Instead of collecting output and reporting completion, it enters an infinite loop issuing pause/unpause commands against the dead container:
+
+When a Theory Simulation container finishes and exits, docker_wrapper_18 fails to detect the exit condition. Instead of collecting output and reporting completion, it enters an infinite loop issuing pause/unpause commands against the dead container. Error: "container is not running" / "Container is not paused" — repeated indefinitely. The wrapper has no handler for this condition.
+
+**2. max_concurrent ignored for Docker tasks**
+app_config.xml with max_concurrent=1 for the Theory app is completely ignored by BOINC 8.2.9. Tasks download and execute 9-10 simultaneously regardless. project_max_concurrent=1 also ignored. Both confirmed active via boinccmd --get_app_config.
+
+**3. Containers stuck in Created state**
+Some containers never progressed past "Created" status and were never started by the wrapper, leaving tasks permanently stuck with no CPU activity.
+
+### Contributing Factor: Wrong chown service path
+boinc-chown.service still targeting /var/lib/boinc-client/slots/ — the dead instance path. Corrected to /home/pepper/slots/.
+
+### app_config.xml
+Theory set to max_concurrent=0 (disabled) pending upstream fix. ATLAS entry removed — LHC@home no longer serves ATLAS tasks.
+
+### Workaround Confirmed
+Killing the wrapper process causes BOINC to immediately report "Computation for task X finished" and clean up correctly. Not sustainable at scale.
+
+### Bug Filed
+BOINC GitHub issue #6957 — docker_wrapper: infinite loop on container exit + max_concurrent ignored for Docker tasks. See docs/completion_watch.log for full task lifecycle capture.
+
+### Key Learnings
+- docker_wrapper is BOINC-supplied, not LHC@home code — bugs filed upstream
+- LHC@home ships docker_wrapper_18; BOINC latest tagged release is dockerwrapper/17
+- max_concurrent enforcement broken for Docker tasks in BOINC 8.2.9 — no local workaround available
+- Theory Simulation disabled pending upstream fix; Einstein@Home + MilkyWay@home resumed
+
+### Current Operational Status
+LHC@home suspended pending resolution of BOINC issue #6957. Einstein@Home and MilkyWay@home re-enabled and running normally. GPU active on Einstein@Home OpenCL tasks. Will resume LHC@home Theory tasks once upstream docker_wrapper fix is available and deployed by LHC@home.
