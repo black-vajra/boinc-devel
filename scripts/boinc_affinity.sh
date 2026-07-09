@@ -5,15 +5,23 @@ POLL_INTERVAL=10      # seconds between checks
 CPU_THRESHOLD=20.0    # minimum %CPU to be considered a compute worker
 MIN_CORES=2           # minimum cores to give any single worker
 ROTATION_STEP=2       # cores to advance the window each cycle
+MAX_MANAGED_CORES=11     # logical CPU cores BOINC workers may use; remaining cores stay free
 # ──────────────────────────────────────────────────────────────────
 
-TOTAL_CORES=$(nproc)
+SYSTEM_CORES=$(nproc)
+
+if [ "$MAX_MANAGED_CORES" -gt 0 ] && [ "$MAX_MANAGED_CORES" -lt "$SYSTEM_CORES" ]; then
+    TOTAL_CORES="$MAX_MANAGED_CORES"
+else
+    TOTAL_CORES="$SYSTEM_CORES"
+fi
 declare -A PINNED_PIDS
 ROTATION_COUNTER=0
 
 echo "========================================="
 echo " BOINC CPU Affinity Manager"
-echo " Total cores: $TOTAL_CORES"
+echo " System cores: $SYSTEM_CORES"
+echo " Managed BOINC cores: $TOTAL_CORES"
 echo " CPU threshold: ${CPU_THRESHOLD}%"
 echo " Poll interval: ${POLL_INTERVAL}s"
 echo " Core allocation: proportional to CPU usage"
@@ -155,7 +163,7 @@ assign_cores() {
 
         echo "  $(date +%H:%M:%S) | '$name' (PID $pid, ${cpu}% CPU) → cores $cpuset ($allocated cores)"
 
-        taskset -cp "$cpuset" "$pid" > /dev/null 2>&1
+        taskset -acp "$cpuset" "$pid" > /dev/null 2>&1
         renice -n 19 -p "$pid" > /dev/null 2>&1
 
         PINNED_PIDS[$pid]="$cpuset"
