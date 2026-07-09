@@ -37,3 +37,17 @@ Next test:
 - Confirm whether the affinity manager detects and manages the relevant Theory/Docker worker process.
 - Confirm task progress, CPU placement, and absence of Docker/BOINC errors.
 
+
+## Theory validation update
+
+Theory Docker validation was performed after temporarily suspending Einstein@Home and non-Theory LHC@home tasks.
+
+Observed result:
+
+- LHC@home Theory Simulation 302.10 Docker tasks started and entered running state.
+- Einstein@Home was successfully suspended during the test.
+- CMS was successfully suspended during the test.
+- The affinity manager continued assigning active compute workers inside the managed `0-10` CPU pool.
+- GPU usage dropped after Einstein suspension, as expected.
+- Theory Docker workload is now confirmed to start successfully under this BOINC configuration.
+
