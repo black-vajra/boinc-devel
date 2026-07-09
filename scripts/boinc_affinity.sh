@@ -18,7 +18,7 @@ echo " CPU threshold: ${CPU_THRESHOLD}%"
 echo " Poll interval: ${POLL_INTERVAL}s"
 echo " Core allocation: proportional to CPU usage"
 echo " Core rotation: every ${POLL_INTERVAL}s, step ${ROTATION_STEP}"
-echo " Stop with: Ctrl+C (or restart boinc)"
+echo " Stop with: Ctrl+C or systemctl stop boinc-affinity.service"
 echo "========================================="
 echo ""
 
@@ -29,39 +29,77 @@ get_client_pid() {
             return
         fi
     done
+
     pgrep -x "boinc" 2>/dev/null | head -1
 }
 
 get_descendants() {
     local parent=$1
     local children
+
     children=$(pgrep -P "$parent" 2>/dev/null)
+
     for child in $children; do
         echo "$child"
         get_descendants "$child"
     done
 }
 
-get_atlas_pids() {
-    pgrep -f "runargs\|EVNTtoHITS\|AtlasG4\|Sim_tf\|Gen_tf\|python.*atlas\|python.*cern" 2>/dev/null
+get_lhc_extra_pids() {
+    # ATLAS native workers and LHC/CMS VirtualBox workers that may not always
+    # appear cleanly under the BOINC process tree.
+    pgrep -f "runargs|EVNTtoHITS|AtlasG4|Sim_tf|Gen_tf|python.*atlas|python.*cern|VBoxHeadless.*boinc_|vboxwrapper|wrapper_.*x86_64-pc-linux-gnu" 2>/dev/null
 }
 
 get_binary_name() {
     local pid=$1
-    basename "$(readlink -f /proc/$pid/exe 2>/dev/null)" 2>/dev/null || \
+    local exe
+
+    exe=$(readlink -f "/proc/$pid/exe" 2>/dev/null)
+
+    if [ -n "$exe" ]; then
+        basename "$exe"
+    else
         ps -p "$pid" -o comm= 2>/dev/null
+    fi
 }
 
 get_compute_workers() {
     local all_pids=("$@")
+
     for pid in "${all_pids[@]}"; do
         local cpu
+
+        [ -z "$pid" ] && continue
+        [ ! -d "/proc/$pid" ] && continue
+
         cpu=$(ps -p "$pid" -o %cpu= 2>/dev/null | tr -d ' ')
         [ -z "$cpu" ] && continue
+
         if echo "$cpu $CPU_THRESHOLD" | awk '{exit !($1 > $2)}'; then
             echo "$pid"
         fi
     done
+}
+
+make_core_list() {
+    local start=$1
+    local count=$2
+    local total=$3
+    local -a cores=()
+
+    # If this worker gets all cores, use compact full-range syntax.
+    if [ "$count" -ge "$total" ]; then
+        echo "0-$((total - 1))"
+        return
+    fi
+
+    for ((j = 0; j < count; j++)); do
+        cores+=( $(( (start + j) % total )) )
+    done
+
+    local IFS=,
+    echo "${cores[*]}"
 }
 
 assign_cores() {
@@ -69,22 +107,28 @@ assign_cores() {
     local count=${#workers[@]}
 
     if [ "$count" -eq 0 ]; then
-        echo "  $(date +%H:%M:%S) | No active compute workers found (none above ${CPU_THRESHOLD}% CPU) - waiting..."
+        echo "  $(date +%H:%M:%S) | No active compute workers found above ${CPU_THRESHOLD}% CPU - waiting..."
         return
     fi
 
-    # Collect CPU usage for each worker
     local -a cpu_vals
     local total_cpu=0
+
     for pid in "${workers[@]}"; do
         local cpu
+
         cpu=$(ps -p "$pid" -o %cpu= 2>/dev/null | tr -d ' ')
         cpu=${cpu:-1}
+
         cpu_vals+=("$cpu")
         total_cpu=$(echo "$total_cpu + $cpu" | bc)
     done
 
-    # Core rotation — shift starting position each cycle
+    # Avoid divide-by-zero if ps briefly reports nonsense.
+    if echo "$total_cpu" | awk '{exit !($1 <= 0)}'; then
+        total_cpu=1
+    fi
+
     local core_cursor=$(( ROTATION_COUNTER % TOTAL_CORES ))
 
     echo "  $(date +%H:%M:%S) | Allocating $TOTAL_CORES cores proportionally across $count worker(s) (total CPU: ${total_cpu}%, rotation offset: ${core_cursor}):"
@@ -93,47 +137,31 @@ assign_cores() {
         local pid=${workers[$i]}
         local cpu=${cpu_vals[$i]}
         local name
+        local allocated
+        local cpuset
+
+        [ ! -d "/proc/$pid" ] && continue
+
         name=$(get_binary_name "$pid")
 
-        # Calculate proportional share of cores, minimum MIN_CORES
-        local allocated
         allocated=$(echo "$cpu $total_cpu $TOTAL_CORES $MIN_CORES" | awk '{
             prop = int(($1 / $2) * $3)
             if (prop < $4) prop = $4
+            if (prop > $3) prop = $3
             print prop
         }')
 
-        local start=$core_cursor
-        local end=$(( core_cursor + allocated - 1 ))
+        cpuset=$(make_core_list "$core_cursor" "$allocated" "$TOTAL_CORES")
 
-        # Wrap around if we exceed total cores
-        if [ "$end" -ge "$TOTAL_CORES" ]; then
-            end=$(( TOTAL_CORES - 1 ))
-        fi
+        echo "  $(date +%H:%M:%S) | '$name' (PID $pid, ${cpu}% CPU) → cores $cpuset ($allocated cores)"
 
-        # Last worker gets all remaining cores in the window
-        if [ "$i" -eq $(( count - 1 )) ]; then
-            end=$(( TOTAL_CORES - 1 ))
-            # If we've wrapped, give from start to end of available range
-            if [ "$start" -ge "$TOTAL_CORES" ]; then
-                start=0
-                end=$(( allocated - 1 ))
-            fi
-        fi
-
-        echo "  $(date +%H:%M:%S) | '$name' (PID $pid, ${cpu}% CPU) → cores $start-$end ($allocated cores)"
-        taskset -cp "$start-$end" "$pid" > /dev/null 2>&1
-        # Also renice to ensure ATLAS/heavy workers stay low priority
+        taskset -cp "$cpuset" "$pid" > /dev/null 2>&1
         renice -n 19 -p "$pid" > /dev/null 2>&1
 
-        PINNED_PIDS[$pid]="$start-$end"
-        core_cursor=$(( end + 1 ))
-
-        # If we've run out of cores, wrap remaining workers to full range
-        if [ "$core_cursor" -ge "$TOTAL_CORES" ]; then
-            core_cursor=0
-        fi
+        PINNED_PIDS[$pid]="$cpuset"
+        core_cursor=$(( (core_cursor + allocated) % TOTAL_CORES ))
     done
+
     echo ""
 }
 
@@ -148,8 +176,16 @@ while true; do
         continue
     fi
 
-    mapfile -t ALL_DESCENDANTS < <({ get_descendants "$CLIENT_PID"; get_atlas_pids; } | sort -u)
-    mapfile -t COMPUTE_WORKERS < <(get_compute_workers "${ALL_DESCENDANTS[@]}")
+    mapfile -t ALL_DESCENDANTS < <(
+        {
+            get_descendants "$CLIENT_PID"
+            get_lhc_extra_pids
+        } | sort -u
+    )
+
+    mapfile -t COMPUTE_WORKERS < <(
+        get_compute_workers "${ALL_DESCENDANTS[@]}"
+    )
 
     CHANGED=false
 
@@ -166,6 +202,7 @@ while true; do
             CHANGED=true
         else
             local_cpu=$(ps -p "$pid" -o %cpu= 2>/dev/null | tr -d ' ')
+
             if [ -z "$local_cpu" ] || ! echo "$local_cpu $CPU_THRESHOLD" | awk '{exit !($1 > $2)}'; then
                 unset "PINNED_PIDS[$pid]"
                 CHANGED=true
@@ -175,23 +212,24 @@ while true; do
 
     if $CHANGED; then
         echo "$(date +%H:%M:%S) | Change detected — ${#COMPUTE_WORKERS[@]} worker(s) above ${CPU_THRESHOLD}% CPU:"
+
         for pid in "${COMPUTE_WORKERS[@]}"; do
             name=$(get_binary_name "$pid")
             cpu=$(ps -p "$pid" -o %cpu= 2>/dev/null | tr -d ' ')
             echo "  → PID $pid : $name (${cpu}% CPU)"
         done
+
         echo ""
 
         unset PINNED_PIDS
         declare -A PINNED_PIDS
     fi
 
-    # Always reassign cores every cycle to enforce rotation
+    # Always reassign cores every cycle to enforce rotation.
     if [ "${#COMPUTE_WORKERS[@]}" -gt 0 ]; then
         assign_cores "${COMPUTE_WORKERS[@]}"
     fi
 
-    # Advance rotation counter
     ROTATION_COUNTER=$(( ROTATION_COUNTER + ROTATION_STEP ))
 
     sleep "$POLL_INTERVAL"
