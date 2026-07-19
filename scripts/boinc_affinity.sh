@@ -3,7 +3,7 @@
 # ─── Configuration ────────────────────────────────────────────────
 POLL_INTERVAL=10      # seconds between checks
 CPU_THRESHOLD=20.0    # minimum %CPU to be considered a compute worker
-MIN_CORES=2           # minimum cores to give any single worker
+MIN_CORES=2           # preferred minimum; reduced fairly if the pool cannot satisfy it
 ROTATION_STEP=2       # cores to advance the window each cycle
 MAX_MANAGED_CORES=11     # logical CPU cores BOINC workers may use; remaining cores stay free
 # ──────────────────────────────────────────────────────────────────
@@ -110,6 +110,71 @@ make_core_list() {
     echo "${cores[*]}"
 }
 
+calculate_core_counts() {
+    local total=$1
+    local preferred_min=$2
+    local tie_start=$3
+    shift 3
+
+    # Return one allocation count per CPU value. When the preferred minimum
+    # cannot fit, lower it just enough to keep every worker inside the pool.
+    # Remaining cores use weighted highest averages. The rotating tie start
+    # prevents equal-load workers from always losing the extra core.
+    printf '%s\n' "$@" | awk \
+        -v total="$total" \
+        -v preferred_min="$preferred_min" \
+        -v tie_start="$tie_start" '
+        NF {
+            cpu[n] = $1 + 0
+            if (cpu[n] <= 0) cpu[n] = 1
+            n++
+        }
+        END {
+            if (n == 0) exit
+
+            effective_min = preferred_min
+            if ((n * effective_min) > total) {
+                effective_min = int(total / n)
+            }
+            if (effective_min < 1) effective_min = 1
+
+            # More workers than cores cannot be placed uniquely. Give each
+            # worker one controlled core; assign_cores() warns before applying
+            # those necessarily shared placements.
+            if (n > total) {
+                for (i = 0; i < n; i++) print 1
+                exit
+            }
+
+            remaining = total - (n * effective_min)
+            for (i = 0; i < n; i++) {
+                allocation[i] = effective_min
+                extras[i] = 0
+            }
+
+            tie_start %= n
+            while (remaining > 0) {
+                best = -1
+                best_score = -1
+
+                for (j = 0; j < n; j++) {
+                    i = (tie_start + j) % n
+                    score = cpu[i] / (extras[i] + 1)
+                    if (score > best_score) {
+                        best = i
+                        best_score = score
+                    }
+                }
+
+                allocation[best]++
+                extras[best]++
+                remaining--
+            }
+
+            for (i = 0; i < n; i++) print allocation[i]
+        }'
+}
+
 assign_cores() {
     local workers=("$@")
     local count=${#workers[@]}
@@ -120,7 +185,9 @@ assign_cores() {
     fi
 
     local -a cpu_vals
+    local -a allocations
     local total_cpu=0
+    local allocated
 
     for pid in "${workers[@]}"; do
         local cpu
@@ -139,25 +206,58 @@ assign_cores() {
 
     local core_cursor=$(( ROTATION_COUNTER % TOTAL_CORES ))
 
-    echo "  $(date +%H:%M:%S) | Allocating $TOTAL_CORES cores proportionally across $count worker(s) (total CPU: ${total_cpu}%, rotation offset: ${core_cursor}):"
+    mapfile -t allocations < <(
+        calculate_core_counts \
+            "$TOTAL_CORES" \
+            "$MIN_CORES" \
+            "$(( ROTATION_COUNTER % count ))" \
+            "${cpu_vals[@]}"
+    )
+
+    if [ "${#allocations[@]}" -ne "$count" ]; then
+        echo "  $(date +%H:%M:%S) | FAIL: allocation planner returned ${#allocations[@]} count(s) for $count worker(s); skipping this cycle"
+        return 1
+    fi
+
+    local effective_min=$MIN_CORES
+    local allocation_mode="without overlap"
+
+    if [ $(( count * MIN_CORES )) -gt "$TOTAL_CORES" ]; then
+        effective_min=$(( TOTAL_CORES / count ))
+        [ "$effective_min" -lt 1 ] && effective_min=1
+
+        echo "  $(date +%H:%M:%S) | WARN: preferred minimum ${MIN_CORES} cannot fit $count workers in $TOTAL_CORES cores; using effective minimum $effective_min"
+    fi
+
+    if [ "$count" -gt "$TOTAL_CORES" ]; then
+        allocation_mode="with controlled one-core sharing"
+        echo "  $(date +%H:%M:%S) | WARN: $count workers exceed the $TOTAL_CORES-core pool; one-core sharing is unavoidable"
+    else
+        local allocation_total=0
+
+        for allocated in "${allocations[@]}"; do
+            allocation_total=$(( allocation_total + allocated ))
+        done
+
+        if [ "$allocation_total" -ne "$TOTAL_CORES" ]; then
+            echo "  $(date +%H:%M:%S) | FAIL: planned allocation totals $allocation_total instead of $TOTAL_CORES; skipping this cycle"
+            return 1
+        fi
+    fi
+
+    echo "  $(date +%H:%M:%S) | Allocating $TOTAL_CORES cores $allocation_mode across $count worker(s) (total CPU: ${total_cpu}%, rotation offset: ${core_cursor}):"
 
     for i in "${!workers[@]}"; do
         local pid=${workers[$i]}
         local cpu=${cpu_vals[$i]}
         local name
-        local allocated
         local cpuset
 
         [ ! -d "/proc/$pid" ] && continue
 
         name=$(get_binary_name "$pid")
 
-        allocated=$(echo "$cpu $total_cpu $TOTAL_CORES $MIN_CORES" | awk '{
-            prop = int(($1 / $2) * $3)
-            if (prop < $4) prop = $4
-            if (prop > $3) prop = $3
-            print prop
-        }')
+        allocated=${allocations[$i]}
 
         cpuset=$(make_core_list "$core_cursor" "$allocated" "$TOTAL_CORES")
 

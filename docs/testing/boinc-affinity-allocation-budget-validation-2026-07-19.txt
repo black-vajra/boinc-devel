@@ -1,0 +1,146 @@
+=== BOINC AFFINITY LIVE VALIDATION ===
+Sun Jul 19 11:38:00 AM EDT 2026
+pots
+
+=== CHECKSUMS ===
+33ad38df37b3bc7242982d73d9a0f0ad61433bff2071f8850a721de93c75c153  /home/pepper/Downloads/boinc_affinity_fixed.sh
+33ad38df37b3bc7242982d73d9a0f0ad61433bff2071f8850a721de93c75c153  /home/pepper/boinc-devel/scripts/boinc_affinity.sh
+33ad38df37b3bc7242982d73d9a0f0ad61433bff2071f8850a721de93c75c153  /usr/local/bin/boinc_affinity.sh
+86c1d2590a6d3f8f6e731248d153a0258c12a5abfd93c1a58aba1e16a8594527  /usr/local/bin/boinc_affinity.sh.pre-allocation-budget-fix
+
+=== SERVICE STATUS ===
+● boinc-affinity.service - BOINC CPU Affinity Manager
+     Loaded: loaded (/etc/systemd/system/boinc-affinity.service; enabled; preset: enabled)
+     Active: active (running) since Sun 2026-07-19 11:37:35 EDT; 25s ago
+    Process: 104553 ExecStartPre=/bin/sleep 5 (code=exited, status=0/SUCCESS)
+   Main PID: 104560 (boinc_affinity.)
+      Tasks: 2 (limit: 34348)
+     Memory: 2.4M (peak: 5.8M)
+        CPU: 3.859s
+     CGroup: /system.slice/boinc-affinity.service
+             ├─104560 /bin/bash /usr/local/bin/boinc_affinity.sh
+             └─105958 sleep 10
+
+Jul 19 11:37:58 pots boinc-affinity[104560]:   → PID 73642 : python (190% CPU)
+Jul 19 11:37:58 pots boinc-affinity[104560]:   11:37:58 | WARN: preferred minimum 2 cannot fit 7 workers in 11 cores; using effective minimum 1
+Jul 19 11:37:58 pots boinc-affinity[104560]:   11:37:58 | Allocating 11 cores without overlap across 7 worker(s) (total CPU: 664.7%, rotation offset: 4):
+Jul 19 11:37:58 pots boinc-affinity[104560]:   11:37:58 | 'einsteinbinary_' (PID 105466, 91.7% CPU) → cores 4 (1 cores)
+Jul 19 11:37:58 pots boinc-affinity[104560]:   11:37:58 | 'einstein_O4MD_2' (PID 3055729, 31.2% CPU) → cores 5 (1 cores)
+Jul 19 11:37:58 pots boinc-affinity[104560]:   11:37:58 | 'hsgamma_FGRP5_1' (PID 3903053, 70.3% CPU) → cores 6 (1 cores)
+Jul 19 11:37:58 pots boinc-affinity[104560]:   11:37:58 | 'hsgamma_FGRP5_1' (PID 4147094, 56.9% CPU) → cores 7 (1 cores)
+Jul 19 11:37:58 pots boinc-affinity[104560]:   11:37:58 | 'hsgamma_FGRP5_1' (PID 4166475, 34.6% CPU) → cores 8 (1 cores)
+Jul 19 11:37:58 pots boinc-affinity[104560]:   11:37:58 | 'python' (PID 73641, 190% CPU) → cores 9,10,0 (3 cores)
+Jul 19 11:37:58 pots boinc-affinity[104560]:   11:37:58 | 'python' (PID 73642, 190% CPU) → cores 1,2,3 (3 cores)
+
+=== NEW SERVICE LOG ===
+Jul 19 11:37:30 pots systemd[1]: Stopping boinc-affinity.service - BOINC CPU Affinity Manager...
+Jul 19 11:37:30 pots systemd[1]: boinc-affinity.service: Deactivated successfully.
+Jul 19 11:37:30 pots systemd[1]: Stopped boinc-affinity.service - BOINC CPU Affinity Manager.
+Jul 19 11:37:30 pots systemd[1]: boinc-affinity.service: Consumed 2h 32min 53.762s CPU time, 10.2M memory peak, 0B memory swap peak.
+Jul 19 11:37:30 pots systemd[1]: Starting boinc-affinity.service - BOINC CPU Affinity Manager...
+Jul 19 11:37:35 pots systemd[1]: Started boinc-affinity.service - BOINC CPU Affinity Manager.
+Jul 19 11:37:35 pots boinc-affinity[104560]: =========================================
+Jul 19 11:37:35 pots boinc-affinity[104560]:  BOINC CPU Affinity Manager
+Jul 19 11:37:35 pots boinc-affinity[104560]:  System cores: 14
+Jul 19 11:37:35 pots boinc-affinity[104560]:  Managed BOINC cores: 11
+Jul 19 11:37:35 pots boinc-affinity[104560]:  CPU threshold: 20.0%
+Jul 19 11:37:35 pots boinc-affinity[104560]:  Poll interval: 10s
+Jul 19 11:37:35 pots boinc-affinity[104560]:  Core allocation: proportional to CPU usage
+Jul 19 11:37:35 pots boinc-affinity[104560]:  Core rotation: every 10s, step 2
+Jul 19 11:37:35 pots boinc-affinity[104560]:  Stop with: Ctrl+C or systemctl stop boinc-affinity.service
+Jul 19 11:37:35 pots boinc-affinity[104560]: =========================================
+Jul 19 11:37:35 pots boinc-affinity[104560]: 11:37:35 | Change detected — 7 worker(s) above 20.0% CPU:
+Jul 19 11:37:35 pots boinc-affinity[104560]:   → PID 3055729 : einstein_O4MD_2 (31.3% CPU)
+Jul 19 11:37:36 pots boinc-affinity[104560]:   → PID 3903053 : hsgamma_FGRP5_1 (70.4% CPU)
+Jul 19 11:37:36 pots boinc-affinity[104560]:   → PID 4147094 : hsgamma_FGRP5_1 (57.2% CPU)
+Jul 19 11:37:36 pots boinc-affinity[104560]:   → PID 4166475 : hsgamma_FGRP5_1 (34.8% CPU)
+Jul 19 11:37:36 pots boinc-affinity[104560]:   → PID 73641 : python (187% CPU)
+Jul 19 11:37:36 pots boinc-affinity[104560]:   → PID 73642 : python (186% CPU)
+Jul 19 11:37:36 pots boinc-affinity[104560]:   → PID 81212 : einsteinbinary_ (24.1% CPU)
+Jul 19 11:37:36 pots boinc-affinity[104560]:   11:37:36 | WARN: preferred minimum 2 cannot fit 7 workers in 11 cores; using effective minimum 1
+Jul 19 11:37:36 pots boinc-affinity[104560]:   11:37:36 | Allocating 11 cores without overlap across 7 worker(s) (total CPU: 590.8%, rotation offset: 0):
+Jul 19 11:37:36 pots boinc-affinity[104560]:   11:37:36 | 'einstein_O4MD_2' (PID 3055729, 31.3% CPU) → cores 0 (1 cores)
+Jul 19 11:37:36 pots boinc-affinity[104560]:   11:37:36 | 'hsgamma_FGRP5_1' (PID 3903053, 70.4% CPU) → cores 1 (1 cores)
+Jul 19 11:37:36 pots boinc-affinity[104560]:   11:37:36 | 'hsgamma_FGRP5_1' (PID 4147094, 57.2% CPU) → cores 2 (1 cores)
+Jul 19 11:37:36 pots boinc-affinity[104560]:   11:37:36 | 'hsgamma_FGRP5_1' (PID 4166475, 34.8% CPU) → cores 3 (1 cores)
+Jul 19 11:37:36 pots boinc-affinity[104560]:   11:37:36 | 'python' (PID 73641, 187% CPU) → cores 4,5,6 (3 cores)
+Jul 19 11:37:36 pots boinc-affinity[104560]:   11:37:36 | 'python' (PID 73642, 186% CPU) → cores 7,8,9 (3 cores)
+Jul 19 11:37:36 pots boinc-affinity[104560]:   11:37:36 | 'einsteinbinary_' (PID 81212, 24.1% CPU) → cores 10 (1 cores)
+Jul 19 11:37:47 pots boinc-affinity[104560]:   11:37:47 | WARN: preferred minimum 2 cannot fit 7 workers in 11 cores; using effective minimum 1
+Jul 19 11:37:47 pots boinc-affinity[104560]:   11:37:47 | Allocating 11 cores without overlap across 7 worker(s) (total CPU: 593.4%, rotation offset: 2):
+Jul 19 11:37:47 pots boinc-affinity[104560]:   11:37:47 | 'einstein_O4MD_2' (PID 3055729, 31.2% CPU) → cores 2 (1 cores)
+Jul 19 11:37:47 pots boinc-affinity[104560]:   11:37:47 | 'hsgamma_FGRP5_1' (PID 3903053, 70.3% CPU) → cores 3 (1 cores)
+Jul 19 11:37:47 pots boinc-affinity[104560]:   11:37:47 | 'hsgamma_FGRP5_1' (PID 4147094, 57.1% CPU) → cores 4 (1 cores)
+Jul 19 11:37:47 pots boinc-affinity[104560]:   11:37:47 | 'hsgamma_FGRP5_1' (PID 4166475, 34.7% CPU) → cores 5 (1 cores)
+Jul 19 11:37:47 pots boinc-affinity[104560]:   11:37:47 | 'python' (PID 73641, 188% CPU) → cores 6,7,8 (3 cores)
+Jul 19 11:37:47 pots boinc-affinity[104560]:   11:37:47 | 'python' (PID 73642, 188% CPU) → cores 9,10,0 (3 cores)
+Jul 19 11:37:47 pots boinc-affinity[104560]:   11:37:47 | 'einsteinbinary_' (PID 81212, 24.1% CPU) → cores 1 (1 cores)
+Jul 19 11:37:58 pots boinc-affinity[104560]: 11:37:58 | Change detected — 7 worker(s) above 20.0% CPU:
+Jul 19 11:37:58 pots boinc-affinity[104560]:   → PID 105466 : einsteinbinary_ (93.9% CPU)
+Jul 19 11:37:58 pots boinc-affinity[104560]:   → PID 3055729 : einstein_O4MD_2 (31.2% CPU)
+Jul 19 11:37:58 pots boinc-affinity[104560]:   → PID 3903053 : hsgamma_FGRP5_1 (70.3% CPU)
+Jul 19 11:37:58 pots boinc-affinity[104560]:   → PID 4147094 : hsgamma_FGRP5_1 (56.9% CPU)
+Jul 19 11:37:58 pots boinc-affinity[104560]:   → PID 4166475 : hsgamma_FGRP5_1 (34.6% CPU)
+Jul 19 11:37:58 pots boinc-affinity[104560]:   → PID 73641 : python (190% CPU)
+Jul 19 11:37:58 pots boinc-affinity[104560]:   → PID 73642 : python (190% CPU)
+Jul 19 11:37:58 pots boinc-affinity[104560]:   11:37:58 | WARN: preferred minimum 2 cannot fit 7 workers in 11 cores; using effective minimum 1
+Jul 19 11:37:58 pots boinc-affinity[104560]:   11:37:58 | Allocating 11 cores without overlap across 7 worker(s) (total CPU: 664.7%, rotation offset: 4):
+Jul 19 11:37:58 pots boinc-affinity[104560]:   11:37:58 | 'einsteinbinary_' (PID 105466, 91.7% CPU) → cores 4 (1 cores)
+Jul 19 11:37:58 pots boinc-affinity[104560]:   11:37:58 | 'einstein_O4MD_2' (PID 3055729, 31.2% CPU) → cores 5 (1 cores)
+Jul 19 11:37:58 pots boinc-affinity[104560]:   11:37:58 | 'hsgamma_FGRP5_1' (PID 3903053, 70.3% CPU) → cores 6 (1 cores)
+Jul 19 11:37:58 pots boinc-affinity[104560]:   11:37:58 | 'hsgamma_FGRP5_1' (PID 4147094, 56.9% CPU) → cores 7 (1 cores)
+Jul 19 11:37:58 pots boinc-affinity[104560]:   11:37:58 | 'hsgamma_FGRP5_1' (PID 4166475, 34.6% CPU) → cores 8 (1 cores)
+Jul 19 11:37:58 pots boinc-affinity[104560]:   11:37:58 | 'python' (PID 73641, 190% CPU) → cores 9,10,0 (3 cores)
+Jul 19 11:37:58 pots boinc-affinity[104560]:   11:37:58 | 'python' (PID 73642, 190% CPU) → cores 1,2,3 (3 cores)
+
+=== ACTIVE SCIENCE WORKERS ===
+  73641   73629   73641   6 SNl   190  9.0 python          python runargs.EVNTtoHITS.py
+  73642   73630   73642   7 SNl   190  9.0 python          python runargs.EVNTtoHITS.py
+ 105466    6159  105466   4 RNl  72.6  0.6 einsteinbinary_ ../../projects/einstein.phys.uwm.edu/einsteinbinary_BRP7_0.17_x86_64-pc-linux-gnu__BRP7-opencl-ati -i Ter5_3_sband_dns_cfbf00041_segment_1_dms_40_23.binary -l Ter5_3_sband_dns_cfbf00041_segment_1_dms_40.zap -o results.cand0 -c Ter5_3_sband_dns_cfbf00041_segment_1_dms_40_23.cpt -A 0.04 -P 1.5 -f 500.0 -W --pb_min 3600 --mc_max 1.6 --mp_min 1.1 --mismatch 0.222 --tobs 1800 --alpha 1.0 --start_template_id 1850000 --no_of_templates 50000 -z
+3903053    6159 3903053   6 SNl  70.3  0.8 hsgamma_FGRP5_1 ../../projects/einstein.phys.uwm.edu/hsgamma_FGRP5_1.08_x86_64-pc-linux-gnu__FGRPSSE --inputfile LATeah2218F.dat --alpha 4.6641740799 --delta -0.6855618954 --skyRadius 0.00165457197 --ldiBins 15 --f0start 72.0 --f0Band 16 --firstSkyPoint 138 --numSkyPoints 3 --f1dot -1.3999999999999999e-11 --f1dotBand 1e-12 --df1dot 9.514523188e-16 --ephemdir JPLEPH.405 --Tcoh 4194304.0 --toplist 10 --cohFollow 10 --numCells 1 --useWeights 1 --Srefinement 1 --CohSkyRef 1 --cohfullskybox 1 --mmfu 0.15 --reftime 57615.0 --f0orbit 0.005 --freeRadiusFactor 2 --mismatch 0.15 --debug 0 --debugCommandLineMangling
+4147094    6159 4147094   7 SNl  56.9  1.7 hsgamma_FGRP5_1 ../../projects/einstein.phys.uwm.edu/hsgamma_FGRP5_1.08_x86_64-pc-linux-gnu__FGRPSSE --inputfile LATeah2218F.dat --alpha 4.6641740799 --delta -0.6855618954 --skyRadius 0.00165457197 --ldiBins 15 --f0start 72.0 --f0Band 16 --firstSkyPoint 156 --numSkyPoints 3 --f1dot -1.0999999999999999e-11 --f1dotBand 1e-12 --df1dot 9.514523188e-16 --ephemdir JPLEPH.405 --Tcoh 4194304.0 --toplist 10 --cohFollow 10 --numCells 1 --useWeights 1 --Srefinement 1 --CohSkyRef 1 --cohfullskybox 1 --mmfu 0.15 --reftime 57615.0 --f0orbit 0.005 --freeRadiusFactor 2 --mismatch 0.15 --debug 0 --debugCommandLineMangling
+   6159    6158    6159   5 Rl   44.2  0.0 boinc           boinc --redirectio --dir /home/pepper
+4166475    6159 4166475   8 SNl  34.6  1.7 hsgamma_FGRP5_1 ../../projects/einstein.phys.uwm.edu/hsgamma_FGRP5_1.08_x86_64-pc-linux-gnu__FGRPSSE --inputfile LATeah2218F.dat --alpha 4.6641740799 --delta -0.6855618954 --skyRadius 0.00165457197 --ldiBins 15 --f0start 72.0 --f0Band 16 --firstSkyPoint 159 --numSkyPoints 3 --f1dot -5.9999999999999995e-12 --f1dotBand 1e-12 --df1dot 9.514523188e-16 --ephemdir JPLEPH.405 --Tcoh 4194304.0 --toplist 10 --cohFollow 10 --numCells 1 --useWeights 1 --Srefinement 1 --CohSkyRef 1 --cohfullskybox 1 --mmfu 0.15 --reftime 57615.0 --f0orbit 0.005 --freeRadiusFactor 2 --mismatch 0.15 --debug 0 --debugCommandLineMangling
+3055729    6159 3055729   5 SNl  31.2  8.8 einstein_O4MD_2 ../../projects/einstein.phys.uwm.edu/einstein_O4MD_2.01_x86_64-pc-linux-gnu --refTime=1379214442.0 --Freq=1436.5 --FreqBand=0.5 --dFreq=1.06249601563994105645e-06 --f1dot=-3.882374e-08 --f1dotBand=9.440965e-11 --df1dot=8.42601364935e-12 --gammaRefine=33 --f2dot=0 --f2dotBand=9.275616e-17 --df2dot=3.83292374914e-18 --gamma2Refine=43 --computeBSGL --BSGLlogcorr=0 --Fstar0=124.171 --oLGX=0.5,0.5 --nCand1=100000 --SortToplist=4 --recalcToplistStats=1 --outputTiming=GCT.timing --outputTimingDetails=GCT.timing --outputFitsFile=GCT.out --semiCohToplist --ephemE=earth --ephemS=sun --segmentList=segments --FstatMethod=ResampBest --FstatMethodRecalc=DemodBest --gridType=3 --skyGridFile={6.123774961816983442 1.026455755842160089} --useGPUSemiCoh=FALSE --allowedMismatchFromSFTLength=0.6 --tlCompartments=10 --getMaxFperSeg --writeLeanerOutput --peakThrF=2.6 --DataFiles1=h1_1435.80_O4aSC00Cl1In0;l1_1435.80_O4aSC00Cl1In0;h1_1436.00_O4aSC00Cl1In0;l1_1436.00_O4aSC00Cl1In0;h1_1436.20_O4aSC00Cl1In0;l1_1436.20_O4aSC00Cl1In0;h1_1436.40_O4aSC00Cl1In0;l1_1436.40_O4aSC00Cl1In0;h1_1436.60_O4aSC00Cl1In0;l1_1436.60_O4aSC00Cl1In0;h1_1436.80_O4aSC00Cl1In0;l1_1436.80_O4aSC00Cl1In0;h1_1437.00_O4aSC00Cl1In0;l1_1437.00_O4aSC00Cl1In0;h1_1437.20_O4aSC00Cl1In0;l1_1437.20_O4aSC00Cl1In0;h1_1437.40_O4aSC00Cl1In0;l1_1437.40_O4aSC00Cl1In0;h1_1437.60_O4aSC00Cl1In0;l1_1437.60_O4aSC00Cl1In0 --WUfpops=4.32e+14
+  55298   47917   55298  12 SNl   1.0  0.2 python3         /cvmfs/atlas.cern.ch/repo/ATLASLocalRootBase/x86_64/python/3.9.22-x86_64-centos7/bin/python3 pilot3/pilot.py -q BOINC_MCORE -i PR -j managed --pilot-user ATLAS --harvester-submit-mode PUSH -w generic --job-type managed --resource-type MCORE -z -t
+  55304   47918   55304  12 SNl   0.9  0.2 python3         /cvmfs/atlas.cern.ch/repo/ATLASLocalRootBase/x86_64/python/3.9.22-x86_64-centos7/bin/python3 pilot3/pilot.py -q BOINC_MCORE -i PR -j managed --pilot-user ATLAS --harvester-submit-mode PUSH -w generic --job-type managed --resource-type MCORE -z -t
+  47290       1   47290  13 Sl    0.6  0.1 cvmfs2          /usr/bin/cvmfs2 -o rw,system_mount,fsname=cvmfs2,allow_other,grab_mountpoint,uid=127,gid=131 atlas.cern.ch /cvmfs/atlas.cern.ch
+   6526    6137    6526  12 Sl+   0.4  0.2 boincmgr        boincmgr
+  73559   64762   73559  11 SN    0.1  1.4 python          python /cvmfs/atlas.cern.ch/repo/sw/software/23.0/AthSimulation/23.0.31/InstallArea/x86_64-centos7-gcc11-opt/bin/Sim_tf.py --inputEVNTFile=EVNT.51044415._000850.pool.root.1 --maxEvents=400 --multithreaded=True --postInclude default:PyJobTransforms.UseFrontier --preInclude EVNTtoHITS:Campaigns.MC23aSimulationMultipleIoV --skipEvents=8800 --randomSeed=21078 --conditionsTag default:OFLCOND-MC21-SDR-RUN3-07 --geometryVersion=default:ATLAS-R3S-2021-03-02-00 --runNumber=700687 --AMITag=s4162 --CA all:True --jobNumber=21078 --firstEvent=8430801 --outputHITSFile=HITS.51044419._022176.pool.root.1 --simulator=FullG4MT_QS
+  73578   64761   73578  11 SN    0.1  1.4 python          python /cvmfs/atlas.cern.ch/repo/sw/software/23.0/AthSimulation/23.0.31/InstallArea/x86_64-centos7-gcc11-opt/bin/Sim_tf.py --inputEVNTFile=EVNT.51044415._000850.pool.root.1 --maxEvents=400 --multithreaded=True --postInclude default:PyJobTransforms.UseFrontier --preInclude EVNTtoHITS:Campaigns.MC23aSimulationMultipleIoV --skipEvents=8400 --randomSeed=21077 --conditionsTag default:OFLCOND-MC21-SDR-RUN3-07 --geometryVersion=default:ATLAS-R3S-2021-03-02-00 --runNumber=700687 --AMITag=s4162 --CA all:True --jobNumber=21077 --firstEvent=8430401 --outputHITSFile=HITS.51044419._022175.pool.root.1 --simulator=FullG4MT_QS
+ 104560       1  104560   6 Ss    0.1  0.0 boinc_affinity. /bin/bash /usr/local/bin/boinc_affinity.sh
+  73628   73578   73628  13 SN    0.1  0.0 prmon           prmon --pid 73626 --filename prmon.full.EVNTtoHITS --json-summary prmon.summary.EVNTtoHITS.json --interval 30
+  73627   73559   73627  11 SN    0.1  0.0 prmon           prmon --pid 73625 --filename prmon.full.EVNTtoHITS --json-summary prmon.summary.EVNTtoHITS.json --interval 30
+  64761   55304   64761  11 SNs   0.0  0.0 bash            /bin/bash -c export ATHENA_CORE_NUMBER=11;export ATHENA_PROC_NUMBER=11;export TZ='UTC'; export PANDA_RESOURCE='BOINC_MCORE';export FRONTIER_ID="[51044419_7223820857]";export CMSSW_VERSION=$FRONTIER_ID;export PandaID=7223820857;export PanDA_TaskID='51044419';export PanDA_AttemptNr='1';export INDS='mc23_13p6TeV.700687.Sh_2211_Zmumu_maxHTpTV2_DplusDstar.merge.EVNT.e8624_e8586_tid51044415_00';export RUCIO_APPID='simul';unset RUCIO_ACCOUNT;export ATLAS_LOCAL_ROOT_BASE=/cvmfs/atlas.cern.ch/repo/ATLASLocalRootBase;source ${ATLAS_LOCAL_ROOT_BASE}/user/atlasLocalSetup.sh --quiet;source $AtlasSetup/scripts/asetup.sh AthSimulation,23.0.31,notest --platform x86_64-centos7-gcc11-opt --makeflags='$MAKEFLAGS'; Sim_tf.py --inputEVNTFile=EVNT.51044415._000850.pool.root.1 --maxEvents=400 --multithreaded=True --postInclude default:PyJobTransforms.UseFrontier --preInclude EVNTtoHITS:Campaigns.MC23aSimulationMultipleIoV --skipEvents=8400 --randomSeed=21077 --conditionsTag default:OFLCOND-MC21-SDR-RUN3-07 --geometryVersion=default:ATLAS-R3S-2021-03-02-00 --runNumber=700687 --AMITag=s4162 --CA all:True --jobNumber=21077 --firstEvent=8430401 --outputHITSFile=HITS.51044419._022175.pool.root.1 --simulator=FullG4MT_QS;
+  64762   55298   64762   3 SNs   0.0  0.0 bash            /bin/bash -c export ATHENA_CORE_NUMBER=11;export ATHENA_PROC_NUMBER=11;export TZ='UTC'; export PANDA_RESOURCE='BOINC_MCORE';export FRONTIER_ID="[51044419_7223820858]";export CMSSW_VERSION=$FRONTIER_ID;export PandaID=7223820858;export PanDA_TaskID='51044419';export PanDA_AttemptNr='1';export INDS='mc23_13p6TeV.700687.Sh_2211_Zmumu_maxHTpTV2_DplusDstar.merge.EVNT.e8624_e8586_tid51044415_00';export RUCIO_APPID='simul';unset RUCIO_ACCOUNT;export ATLAS_LOCAL_ROOT_BASE=/cvmfs/atlas.cern.ch/repo/ATLASLocalRootBase;source ${ATLAS_LOCAL_ROOT_BASE}/user/atlasLocalSetup.sh --quiet;source $AtlasSetup/scripts/asetup.sh AthSimulation,23.0.31,notest --platform x86_64-centos7-gcc11-opt --makeflags='$MAKEFLAGS'; Sim_tf.py --inputEVNTFile=EVNT.51044415._000850.pool.root.1 --maxEvents=400 --multithreaded=True --postInclude default:PyJobTransforms.UseFrontier --preInclude EVNTtoHITS:Campaigns.MC23aSimulationMultipleIoV --skipEvents=8800 --randomSeed=21078 --conditionsTag default:OFLCOND-MC21-SDR-RUN3-07 --geometryVersion=default:ATLAS-R3S-2021-03-02-00 --runNumber=700687 --AMITag=s4162 --CA all:True --jobNumber=21078 --firstEvent=8430801 --outputHITSFile=HITS.51044419._022176.pool.root.1 --simulator=FullG4MT_QS;
+  47917   47916   47917  10 SN    0.0  0.0 runpilot2-wrapp /bin/bash ./runpilot2-wrapper.sh -q BOINC_MCORE -j managed --pilot-user ATLAS --harvester-submit-mode PUSH -w generic --job-type managed --resource-type MCORE --pilotversion 3.13.3.3 -z -t --piloturl local --mute --container
+  47918   47915   47918  10 SN    0.0  0.0 runpilot2-wrapp /bin/bash ./runpilot2-wrapper.sh -q BOINC_MCORE -j managed --pilot-user ATLAS --harvester-submit-mode PUSH -w generic --job-type managed --resource-type MCORE --pilotversion 3.13.3.3 -z -t --piloturl local --mute --container
+  64765   55304   64765  12 SNs   0.0  0.0 bash            /bin/bash -c cd /home/pepper/slots/4/PanDA_Pilot-7223820857;export ATLAS_LOCAL_ROOT_BASE=/cvmfs/atlas.cern.ch/repo/ATLASLocalRootBase;source ${ATLAS_LOCAL_ROOT_BASE}/user/atlasLocalSetup.sh --quiet;lsetup prmon;prmon --pid 64761 --filename memory_monitor_output.txt --json-summary memory_monitor_summary.json --interval 60
+  64774   55298   64774  13 SNs   0.0  0.0 bash            /bin/bash -c cd /home/pepper/slots/6/PanDA_Pilot-7223820858;export ATLAS_LOCAL_ROOT_BASE=/cvmfs/atlas.cern.ch/repo/ATLASLocalRootBase;source ${ATLAS_LOCAL_ROOT_BASE}/user/atlasLocalSetup.sh --quiet;lsetup prmon;prmon --pid 64762 --filename memory_monitor_output.txt --json-summary memory_monitor_summary.json --interval 60
+   6533    6137    6533  13 S+    0.0  0.0 journalctl      journalctl -fu boinc-affinity.service
+   4531       1    4531  13 Ss    0.0  0.0 bash            /bin/bash -c while true; do chown boinc:boinc /home/pepper/slots/*/shared/output.tgz 2>/dev/null; sleep 30; done
+   3123       2    3123  12 S     0.0  0.0 iprt-VBoxTscThr [iprt-VBoxTscThread]
+   3121       2    3121   8 I<    0.0  0.0 kworker/R-iprt- [kworker/R-iprt-VBoxWQueue]
+   6137    6107    6137   7 S+    0.0  0.0 start-boinc-pro /bin/bash ./start-boinc-procedure
+   6156    6137    6156   8 S+    0.0  0.0 sudo            sudo boinc --redirectio --dir /home/pepper
+   6158    6156    6158  10 Ss+   0.0  0.0 sudo            sudo boinc --redirectio --dir /home/pepper
+  46996   46994   46996   6 SN    0.0  0.0 run_atlas       /bin/bash run_atlas --nthreads 11
+  47112   47110   47112   4 SN    0.0  0.0 run_atlas       /bin/bash run_atlas --nthreads 11
+  47272       1   47272  10 S     0.0  0.0 cvmfs2          /usr/bin/cvmfs2 -o rw,system_mount,fsname=cvmfs2,allow_other,grab_mountpoint,uid=127,gid=131 atlas.cern.ch /cvmfs/atlas.cern.ch
+  47828   47789   47828   7 SN    0.0  0.0 sh              /usr/bin/sh start_atlas.sh
+  47829   47788   47829  10 SN    0.0  0.0 sh              /usr/bin/sh start_atlas.sh
+  47915   47829   47915   6 SN    0.0  0.0 time            /usr/bin/time -o /home/pepper/slots/4/53bb0aad4b3e.diag -a -f WallTime=%es\nKernelTime=%Ss\nUserTime=%Us\nCPUUsage=%P\nMaxResidentMemory=%MkB\nAverageResidentMemory=%tkB\nAverageTotalMemory=%KkB\nAverageUnsharedMemory=%DkB\nAverageUnsharedStack=%pkB\nAverageSharedMemory=%XkB\nPageSize=%ZB\nMajorPageFaults=%F\nMinorPageFaults=%R\nSwaps=%W\nForcedSwitches=%c\nWaitSwitches=%w\nInputs=%I\nOutputs=%O\nSocketReceived=%r\nSocketSent=%s\nSignals=%k\n ./runpilot2-wrapper.sh -q BOINC_MCORE -j managed --pilot-user ATLAS --harvester-submit-mode PUSH -w generic --job-type managed --resource-type MCORE --pilotversion 3.13.3.3 -z -t --piloturl local --mute --container
+  47916   47828   47916   0 SN    0.0  0.0 time            /usr/bin/time -o /home/pepper/slots/6/53bb1c8bd6fd.diag -a -f WallTime=%es\nKernelTime=%Ss\nUserTime=%Us\nCPUUsage=%P\nMaxResidentMemory=%MkB\nAverageResidentMemory=%tkB\nAverageTotalMemory=%KkB\nAverageUnsharedMemory=%DkB\nAverageUnsharedStack=%pkB\nAverageSharedMemory=%XkB\nPageSize=%ZB\nMajorPageFaults=%F\nMinorPageFaults=%R\nSwaps=%W\nForcedSwitches=%c\nWaitSwitches=%w\nInputs=%I\nOutputs=%O\nSocketReceived=%r\nSocketSent=%s\nSignals=%k\n ./runpilot2-wrapper.sh -q BOINC_MCORE -j managed --pilot-user ATLAS --harvester-submit-mode PUSH -w generic --job-type managed --resource-type MCORE --pilotversion 3.13.3.3 -z -t --piloturl local --mute --container
+  55299   47917   55299   7 SN    0.0  0.0 runpilot2-wrapp /bin/bash ./runpilot2-wrapper.sh -q BOINC_MCORE -j managed --pilot-user ATLAS --harvester-submit-mode PUSH -w generic --job-type managed --resource-type MCORE --pilotversion 3.13.3.3 -z -t --piloturl local --mute --container
+  55305   47918   55305   8 SN    0.0  0.0 runpilot2-wrapp /bin/bash ./runpilot2-wrapper.sh -q BOINC_MCORE -j managed --pilot-user ATLAS --harvester-submit-mode PUSH -w generic --job-type managed --resource-type MCORE --pilotversion 3.13.3.3 -z -t --piloturl local --mute --container
+  73625   73559   73625  12 SN    0.0  0.0 runwrapper.EVNT /bin/sh ./runwrapper.EVNTtoHITS.sh
+  73626   73578   73626   1 SN    0.0  0.0 runwrapper.EVNT /bin/sh ./runwrapper.EVNTtoHITS.sh
+  73629   73626   73629   8 SN    0.0  0.0 athena.py       /bin/sh /cvmfs/atlas.cern.ch/repo/sw/software/23.0/AthSimulation/23.0.31/InstallArea/x86_64-centos7-gcc11-opt/bin/athena.py --preloadlib=/cvmfs/atlas.cern.ch/repo/sw/software/23.0/AthSimulationExternals/23.0.31/InstallArea/x86_64-centos7-gcc11-opt/lib/libintlc.so.5:/cvmfs/atlas.cern.ch/repo/sw/software/23.0/AthSimulationExternals/23.0.31/InstallArea/x86_64-centos7-gcc11-opt/lib/libimf.so --CA runargs.EVNTtoHITS.py
+  73630   73625   73630   2 SN    0.0  0.0 athena.py       /bin/sh /cvmfs/atlas.cern.ch/repo/sw/software/23.0/AthSimulation/23.0.31/InstallArea/x86_64-centos7-gcc11-opt/bin/athena.py --preloadlib=/cvmfs/atlas.cern.ch/repo/sw/software/23.0/AthSimulationExternals/23.0.31/InstallArea/x86_64-centos7-gcc11-opt/lib/libintlc.so.5:/cvmfs/atlas.cern.ch/repo/sw/software/23.0/AthSimulationExternals/23.0.31/InstallArea/x86_64-centos7-gcc11-opt/lib/libimf.so --CA runargs.EVNTtoHITS.py
+ 105966   39843  105966  12 S+    0.0  0.0 grep            grep --color=auto -Ei boinc|einstein|atlas|cms|vbox|runargs|EVNTtoHITS
+
+=== REPOSITORY STATUS ===
+## main...origin/main
+ M scripts/boinc_affinity.sh
+ scripts/boinc_affinity.sh | 118 ++++++++++++++++++++++++++++++++++++++++++----
+ 1 file changed, 109 insertions(+), 9 deletions(-)
