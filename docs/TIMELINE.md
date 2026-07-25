@@ -506,3 +506,35 @@ LHC@home suspended pending resolution of BOINC issue #6957. Einstein@Home and Mi
 ### GitHub Discussion Filed
 BOINC GitHub Discussion #6958 — Proposal: Zero-Config Volunteer Computing for LHC@home
 https://github.com/BOINC/boinc/discussions/6958
+
+---
+
+## Phase 13 — Kernel and BOINC State Recovery
+**July 25, 2026**
+
+### Kernel regression containment
+
+Kernel `7.0.0-28-generic` hung after successful LUKS unlock and also showed
+AMDGPU teardown failures during shutdown. Kernel `6.17.0-40-generic` booted
+cleanly and was selected as the explicit GRUB default. Its exact packages were
+marked manual to protect them from autoremove.
+
+### BOINC data-directory consolidation
+
+The historical root client under `/home/pepper` and the systemd client under
+`/var/lib/boinc-client` had diverged. The former contained the intended
+LHC-only project state; the latter contained stale Einstein, LHC, and MilkyWay
+attachments. The LHC-only state was safely migrated into the service directory,
+with the replaced tree retained for rollback.
+
+The manual root-client workflow was retired. systemd now owns the entire client
+control group, BOINC Manager connects to that client, and the affinity service
+rotates at most four active CPUs across `0-11` while reserving `12-13`.
+
+### SableLinux record import
+
+The standalone repository now summarizes SableLinux BOINC 8.2.11 source-build
+work, the manual `boincctl` layer, EliteBook validation, Z890 client/GPU
+validation, and the custom-kernel readiness checkpoint for rootless LHC
+containers. Ongoing Sable integration remains in `sablelinux/development` until
+validated and promoted under `SYNC_POLICY.md`.

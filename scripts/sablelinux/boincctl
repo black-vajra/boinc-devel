@@ -1,0 +1,274 @@
+#!/usr/bin/env bash
+
+set -u
+
+UNIT="boinc-client.service"
+DATA="/var/lib/boinc-client"
+BOINCCMD="/opt/boinc/current/bin/boinccmd"
+RPC_HOST="127.0.0.1"
+RPC_PORT="31416"
+RPC_TIMEOUT="60"
+
+usage() {
+    cat <<USAGE
+Usage: boincctl COMMAND
+
+Commands:
+  start       Start BOINC and wait for GUI-RPC readiness
+  stop        Stop BOINC cleanly
+  restart     Stop and restart BOINC
+  status      Show service, RPC, process, and boot-policy state
+  view        Show status, BOINC state, projects, tasks, and recent logs
+  logs        Follow the BOINC systemd journal
+  help        Show this help
+
+The BOINC service remains disabled at boot. This command never enables it.
+USAGE
+}
+
+service_active() {
+    systemctl is-active --quiet "$UNIT"
+}
+
+service_enabled() {
+    systemctl is-enabled --quiet "$UNIT"
+}
+
+rpc_ready() {
+    ss -ltn 2>/dev/null |
+        grep -qE \
+            "(^|[[:space:]])${RPC_HOST}:${RPC_PORT}[[:space:]]"
+}
+
+rpc_command() {
+    sudo -u boinc \
+        env \
+            HOME="$DATA" \
+            PATH="/opt/boinc/current/bin:/usr/bin:/bin" \
+            LD_LIBRARY_PATH="/opt/boinc/current/lib:/opt/rocm-7.2.2/lib" \
+        bash -c '
+            data="$1"
+            shift
+
+            cd "$data" || {
+                echo "ERROR: cannot enter BOINC data directory" >&2
+                exit 90
+            }
+
+            if [ ! -r gui_rpc_auth.cfg ]; then
+                echo "ERROR: GUI-RPC credential is unreadable" >&2
+                exit 91
+            fi
+
+            password="$(tr -d "\r\n" < gui_rpc_auth.cfg)"
+
+            if [ -z "$password" ]; then
+                echo "ERROR: GUI-RPC credential is empty" >&2
+                exit 92
+            fi
+
+            exec /opt/boinc/current/bin/boinccmd \
+                --host 127.0.0.1 \
+                --passwd "$password" \
+                "$@"
+        ' bash "$DATA" "$@"
+}
+
+wait_for_rpc() {
+    local timeout="${1:-$RPC_TIMEOUT}"
+    local second
+
+    for second in $(seq 1 "$timeout"); do
+        if rpc_ready; then
+            echo "GUI-RPC ready after ${second} second(s)."
+            return 0
+        fi
+
+        if ! service_active; then
+            echo "ERROR: BOINC stopped during initialization." >&2
+            return 1
+        fi
+
+        sleep 1
+    done
+
+    echo "ERROR: GUI-RPC was not ready within ${timeout} seconds." >&2
+    return 1
+}
+
+show_status() {
+    local active_state
+    local enabled_state
+    local main_pid
+
+    active_state="$(systemctl is-active "$UNIT" 2>/dev/null || true)"
+    enabled_state="$(systemctl is-enabled "$UNIT" 2>/dev/null || true)"
+    main_pid="$(systemctl show "$UNIT" -p MainPID --value 2>/dev/null)"
+
+    echo "BOINC service:       ${active_state:-unknown}"
+    echo "Boot policy:         ${enabled_state:-unknown}"
+    echo "Main PID:            ${main_pid:-0}"
+
+    if rpc_ready; then
+        echo "GUI-RPC:             ready at ${RPC_HOST}:${RPC_PORT}"
+    else
+        echo "GUI-RPC:             unavailable"
+    fi
+
+    if pgrep -x boinc >/dev/null 2>&1; then
+        echo "BOINC process:       present"
+        pgrep -a -x boinc
+    else
+        echo "BOINC process:       absent"
+    fi
+
+    if service_enabled; then
+        echo "Policy warning:      service is enabled at boot"
+        return 1
+    fi
+
+    echo "Manual-only policy:  preserved"
+    return 0
+}
+
+start_client() {
+    if service_enabled; then
+        echo "ERROR: refusing to start because $UNIT is enabled at boot." >&2
+        return 1
+    fi
+
+    if service_active; then
+        echo "BOINC is already running."
+    else
+        echo "Starting BOINC..."
+        sudo systemctl start "$UNIT" || return 1
+    fi
+
+    if ! wait_for_rpc "$RPC_TIMEOUT"; then
+        echo
+        echo "Recent BOINC journal:"
+        sudo journalctl -u "$UNIT" --no-pager -n 80
+        return 1
+    fi
+
+    echo
+    rpc_command --get_cc_status
+}
+
+stop_client() {
+    local second
+
+    if service_active; then
+        echo "Stopping BOINC..."
+        sudo systemctl stop "$UNIT" || return 1
+    else
+        echo "BOINC is already stopped."
+    fi
+
+    for second in $(seq 1 15); do
+        if ! service_active &&
+           ! pgrep -x boinc >/dev/null 2>&1; then
+            break
+        fi
+        sleep 1
+    done
+
+    if service_active; then
+        echo "ERROR: systemd service remains active." >&2
+        return 1
+    fi
+
+    if pgrep -x boinc >/dev/null 2>&1; then
+        echo "ERROR: BOINC process remains after shutdown." >&2
+        pgrep -a -x boinc
+        return 1
+    fi
+
+    if rpc_ready; then
+        echo "ERROR: GUI-RPC port remains open after shutdown." >&2
+        return 1
+    fi
+
+    if service_enabled; then
+        echo "ERROR: service became enabled at boot." >&2
+        return 1
+    fi
+
+    echo "BOINC stopped cleanly."
+    echo "Manual-only boot policy preserved."
+}
+
+view_client() {
+    show_status
+    local status_result=$?
+
+    echo
+
+    if ! service_active; then
+        echo "BOINC is stopped. No live client state is available."
+    else
+        if ! rpc_ready; then
+            echo "Waiting for GUI-RPC readiness..."
+            wait_for_rpc "$RPC_TIMEOUT" || return 1
+        fi
+
+        echo "=== COMPUTING STATUS ==="
+        rpc_command --get_cc_status || true
+
+        echo
+        echo "=== PROJECTS ==="
+        rpc_command --get_project_status || true
+
+        echo
+        echo "=== TASKS ==="
+        rpc_command --get_tasks || true
+    fi
+
+    echo
+    echo "=== RECENT JOURNAL ==="
+    sudo journalctl \
+        -u "$UNIT" \
+        --no-pager \
+        -n 60
+
+    return "$status_result"
+}
+
+follow_logs() {
+    sudo journalctl \
+        -u "$UNIT" \
+        -f \
+        -o short-iso
+}
+
+command="${1:-help}"
+
+case "$command" in
+    start)
+        start_client
+        ;;
+    stop)
+        stop_client
+        ;;
+    restart)
+        stop_client && start_client
+        ;;
+    status)
+        show_status
+        ;;
+    view)
+        view_client
+        ;;
+    logs)
+        follow_logs
+        ;;
+    help|-h|--help)
+        usage
+        ;;
+    *)
+        echo "ERROR: unknown command: $command" >&2
+        echo >&2
+        usage >&2
+        exit 64
+        ;;
+esac

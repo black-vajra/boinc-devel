@@ -1,8 +1,39 @@
-#!/bin/bash
-##(cd /var/lib/boinc-client && boinccmd --set_run_mode never)
-(cd /home/pepper && boinccmd --set_run_mode never)
-sleep 10
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+DATA_DIR=/var/lib/boinc-client
+BOINCCMD=/usr/local/bin/boinccmd
+
+[[ "$(id -u)" -ne 0 ]] || {
+    echo "Run this as pepper, not root." >&2
+    exit 1
+}
+
+if systemctl is-active --quiet boinc-client.service; then
+    cd "$DATA_DIR"
+    sudo -u boinc "$BOINCCMD" --set_run_mode never 0 || true
+    sudo -u boinc "$BOINCCMD" --set_gpu_mode never 0 || true
+    sudo -u boinc "$BOINCCMD" --set_network_mode never 0 || true
+    echo "Allowing tasks two minutes to suspend cleanly..."
+    sleep 120
+fi
+
+pkill -x boincmgr 2>/dev/null || true
 sudo systemctl stop boinc-affinity.service
-sudo pkill boincmgr
-sudo pkill boinc
-sudo pkill -f "runargs.EVNTtoHITS" 2>/dev/null
+sudo systemctl stop boinc-client.service
+sudo systemctl stop docker.service docker.socket containerd.service
+
+if command -v cvmfs_config >/dev/null 2>&1; then
+    sudo cvmfs_config umount || true
+fi
+sudo systemctl stop autofs.service
+
+echo
+echo "Remaining BOINC/LHC workload processes:"
+pgrep -a -f \
+    '(^|/)(boinc|boinc_client)( |$)|VBoxHeadless|cmsRun|runatlas|runargs\.EVNTtoHITS' ||
+    echo "none"
+
+echo
+echo "Remaining CVMFS mounts:"
+findmnt -R /cvmfs 2>/dev/null || echo "none"

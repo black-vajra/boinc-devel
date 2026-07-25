@@ -1,0 +1,15 @@
+Host: pots
+Platform: Kubuntu
+Kernel: 6.17.0-40-generic
+BOINC: 8.2.13
+Authoritative data directory: /var/lib/boinc-client
+Attached projects: LHC@home only
+Client service: active
+Affinity service: active
+RPC: 127.0.0.1:31416
+Affinity limit: 4 active BOINC CPUs
+Rotation pool: logical CPUs 0-11
+Reserved CPUs: logical CPUs 12-13
+Observed blocks: 0-3, 4-7, 8-11
+Manager: connected after stale GUI restart
+Result: PASS

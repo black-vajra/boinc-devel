@@ -1,0 +1,168 @@
+SABLELINUX BOINCCTL INSTALLATION VALIDATION
+timestamp_utc=2026-07-19T19:13:16Z
+host=SableLinux
+
+=== INSTALLED FILES ===
+-rwxr-xr-x 1 pepper pepper 6114 Jul 19 15:13 /home/pepper/sablelinux/scripts/boinc/boincctl
+-rwxr-xr-x 1 root   root   6114 Jul 19 15:13 /usr/local/bin/boincctl
+9ea0bfd1f27f8c0568827c12308430fc16440bbe8a722b8e031481e44a8e36bc  /home/pepper/sablelinux/scripts/boinc/boincctl
+9ea0bfd1f27f8c0568827c12308430fc16440bbe8a722b8e031481e44a8e36bc  /usr/local/bin/boincctl
+
+=== HELP ===
+Usage: boincctl COMMAND
+
+Commands:
+  start       Start BOINC and wait for GUI-RPC readiness
+  stop        Stop BOINC cleanly
+  restart     Stop and restart BOINC
+  status      Show service, RPC, process, and boot-policy state
+  view        Show status, BOINC state, projects, tasks, and recent logs
+  logs        Follow the BOINC systemd journal
+  help        Show this help
+
+The BOINC service remains disabled at boot. This command never enables it.
+help_status=0
+
+=== STOPPED STATUS ===
+BOINC service:       inactive
+Boot policy:         disabled
+Main PID:            0
+GUI-RPC:             unavailable
+BOINC process:       absent
+Manual-only policy:  preserved
+stopped_status=0
+
+=== CONTROLLED START ===
+Starting BOINC...
+GUI-RPC ready after 14 second(s).
+
+network connection status: don't need connection
+CPU status
+    not suspended
+    current mode: according to prefs
+    perm mode: according to prefs
+    perm becomes current in 0 sec
+GPU status
+    not suspended
+    current mode: according to prefs
+    perm mode: according to prefs
+    perm becomes current in 0 sec
+Network status
+    not suspended
+    current mode: according to prefs
+    perm mode: according to prefs
+    perm becomes current in 0 sec
+start_status=0
+
+=== LIVE VIEW ===
+BOINC service:       active
+Boot policy:         disabled
+Main PID:            60514
+GUI-RPC:             ready at 127.0.0.1:31416
+BOINC process:       present
+60514 /opt/boinc/current/bin/boinc --dir /var/lib/boinc-client --skip_cpu_benchmarks
+Manual-only policy:  preserved
+
+=== COMPUTING STATUS ===
+network connection status: don't need connection
+CPU status
+    not suspended
+    current mode: according to prefs
+    perm mode: according to prefs
+    perm becomes current in 0 sec
+GPU status
+    not suspended
+    current mode: according to prefs
+    perm mode: according to prefs
+    perm becomes current in 0 sec
+Network status
+    not suspended
+    current mode: according to prefs
+    perm mode: according to prefs
+    perm becomes current in 0 sec
+
+=== PROJECTS ===
+======== Projects ========
+
+=== TASKS ===
+
+======== Tasks ========
+
+=== RECENT JOURNAL ===
+Jul 19 15:11:19 SableLinux boinc[56580]: 19-Jul-2026 15:11:19 [---] -  Store at least 0.10 days of work
+Jul 19 15:11:19 SableLinux boinc[56580]: 19-Jul-2026 15:11:19 [---] -  Store up to an additional 0.25 days of work
+Jul 19 15:11:19 SableLinux boinc[56580]: 19-Jul-2026 15:11:19 [---] -  max disk usage: 100.00 GB
+Jul 19 15:11:19 SableLinux boinc[56580]: 19-Jul-2026 15:11:19 [---] -  (to change preferences, visit a project web site or select 'Options / Computing preferences...' in the Manager)
+Jul 19 15:11:19 SableLinux boinc[56580]: 19-Jul-2026 15:11:19 [---] Setting up project and slot directories
+Jul 19 15:11:19 SableLinux boinc[56580]: 19-Jul-2026 15:11:19 [---] Checking active tasks
+Jul 19 15:11:19 SableLinux boinc[56580]: 19-Jul-2026 15:11:19 [---] Setting up GUI RPC socket
+Jul 19 15:11:19 SableLinux boinc[56580]: 19-Jul-2026 15:11:19 [---] Checking presence of 0 project files
+Jul 19 15:11:19 SableLinux boinc[56580]: 19-Jul-2026 15:11:19 [---] This computer is not attached to any projects
+Jul 19 15:11:19 SableLinux boinc[56580]: 19-Jul-2026 15:11:19 Initialization completed
+Jul 19 15:11:19 SableLinux boinc[56580]: 19-Jul-2026 15:11:19 [---] Currently BOINC uses legacy idle detection methods that might not work properly on all systems. Please consider installing a modern idle detection utility that works on Wayland and X11: https://github.com/jamescowens/idle_detect
+Jul 19 15:11:19 SableLinux boinc[56580]: 19-Jul-2026 15:11:19 [---] Received signal 15
+Jul 19 15:11:19 SableLinux systemd[1]: Stopping SableLinux BOINC Client...
+Jul 19 15:11:20 SableLinux boinc[56580]: 19-Jul-2026 15:11:20 [---] Exiting
+Jul 19 15:11:20 SableLinux systemd[1]: boinc-client.service: Deactivated successfully.
+Jul 19 15:11:20 SableLinux systemd[1]: Stopped SableLinux BOINC Client.
+Jul 19 15:11:20 SableLinux systemd[1]: boinc-client.service: Consumed 11.826s CPU time.
+Jul 19 15:13:16 SableLinux systemd[1]: Starting SableLinux BOINC Client...
+Jul 19 15:13:16 SableLinux systemd[1]: Started SableLinux BOINC Client.
+Jul 19 15:13:16 SableLinux boinc[60514]: 19-Jul-2026 15:13:16 [---] cc_config.xml not found - using defaults
+Jul 19 15:13:28 SableLinux boinc[60514]: 19-Jul-2026 15:13:28 [---] Starting BOINC client version 8.2.11 for x86_64-pc-linux-gnu
+Jul 19 15:13:28 SableLinux boinc[60514]: 19-Jul-2026 15:13:28 [---] log flags: file_xfer, sched_ops, task
+Jul 19 15:13:28 SableLinux boinc[60514]: 19-Jul-2026 15:13:28 [---] cURL libraries: libcurl/8.15.0 OpenSSL/3.5.2 zlib/1.3.1 zstd/1.5.7 libpsl/0.21.5
+Jul 19 15:13:28 SableLinux boinc[60514]: 19-Jul-2026 15:13:28 [---] Data directory: /var/lib/boinc-client
+Jul 19 15:13:29 SableLinux boinc[60514]: 19-Jul-2026 15:13:29 [---] OpenCL: AMD/ATI GPU 0: AMD Radeon Graphics (driver version 3581.0 (HSA1.1,LC), device version OpenCL 2.0, 15.92GB, 15.92GB available, 10.73 TFLOPS peak)
+Jul 19 15:13:29 SableLinux boinc[60514]: 19-Jul-2026 15:13:29 [---] Computer name: SableLinux
+Jul 19 15:13:29 SableLinux boinc[60514]: 19-Jul-2026 15:13:29 [---] Processor: 14 GenuineIntel Intel(R) Core(TM) Ultra 5 245K [Family 6 Model 198 Stepping 2]
+Jul 19 15:13:29 SableLinux boinc[60514]: 19-Jul-2026 15:13:29 [---] Processor features: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush dts acpi mmx fxsr sse sse2 ss ht tm pbe syscall nx pdpe1gb rdtscp lm constant_tsc art arch_perfmon pebs bts rep_good nopl xtopology nonstop_tsc cpuid aperfmperf tsc_known_freq pni pclmulqdq dtes64 monitor ds_cpl vmx smx est tm2 ssse3 sdbg fma cx16 xtpr pdcm pcid sse4_1 sse4_2 x2apic movbe popcnt tsc_deadline_timer aes xsave avx f16c rdrand lahf_lm abm 3dnowprefetch cpuid_fault ssbd ibrs ibpb stibp ibrs_enhanced tpr_shadow flexpriority ept vpid ept_ad fsgsbase tsc_adjust bmi1 avx2 smep bmi2 erms invpcid rdt_a rdseed adx smap clflushopt clwb intel_pt sha_ni xsaveopt xsavec xgetbv1 xsaves split_lock_detect avx_vnni lam wbnoinvd dtherm ida arat pln pts hwp hwp_notify hwp_act_window hwp_epp hwp_pkg_req hfi vnmi umip pku ospke waitpkg gfni vaes vpclmulqdq rdpid bus_lock_detect movdiri movdir64b fsrm md_clear serialize arch_lbr ibt flush_l1d arch_capabilities
+Jul 19 15:13:29 SableLinux boinc[60514]: 19-Jul-2026 15:13:29 [---] OS: Linux SableLinux: Sable Linux 1.0 [6.16.1-sable-compat|libc 2.42]
+Jul 19 15:13:29 SableLinux boinc[60514]: 19-Jul-2026 15:13:29 [---] Memory: 30.82 GB physical, 0 bytes virtual
+Jul 19 15:13:29 SableLinux boinc[60514]: 19-Jul-2026 15:13:29 [---] Disk: 935.37 GB total, 603.60 GB free
+Jul 19 15:13:29 SableLinux boinc[60514]: 19-Jul-2026 15:13:29 [---] Local time is UTC -4 hours
+Jul 19 15:13:29 SableLinux boinc[60514]: 19-Jul-2026 15:13:29 [---] Some projects require Docker; we recommend that you install it.
+Jul 19 15:13:29 SableLinux boinc[60514]: 19-Jul-2026 15:13:29 [---] See https://github.com/BOINC/boinc/wiki/Installing-Docker-on-Linux
+Jul 19 15:13:29 SableLinux boinc[60514]: 19-Jul-2026 15:13:29 [---] No general preferences found - using defaults
+Jul 19 15:13:29 SableLinux boinc[60514]: 19-Jul-2026 15:13:29 [---] Reading preferences override file
+Jul 19 15:13:29 SableLinux boinc[60514]: 19-Jul-2026 15:13:29 [---] Computing preferences:
+Jul 19 15:13:29 SableLinux boinc[60514]: 19-Jul-2026 15:13:29 [---] -  When computer is in use
+Jul 19 15:13:29 SableLinux boinc[60514]: 19-Jul-2026 15:13:29 [---] -     'In use' means mouse/keyboard input in last 0.00 minutes
+Jul 19 15:13:29 SableLinux boinc[60514]: 19-Jul-2026 15:13:29 [---] -     max CPUs used: 7
+Jul 19 15:13:29 SableLinux boinc[60514]: 19-Jul-2026 15:13:29 [---] -     Use at most 100% of the CPU time
+Jul 19 15:13:29 SableLinux boinc[60514]: 19-Jul-2026 15:13:29 [---] -     suspend if non-BOINC CPU load exceeds 100%
+Jul 19 15:13:29 SableLinux boinc[60514]: 19-Jul-2026 15:13:29 [---] -     max memory usage: 15.41 GB
+Jul 19 15:13:29 SableLinux boinc[60514]: 19-Jul-2026 15:13:29 [---] -  When computer is not in use
+Jul 19 15:13:29 SableLinux boinc[60514]: 19-Jul-2026 15:13:29 [---] -     max CPUs used: 7
+Jul 19 15:13:29 SableLinux boinc[60514]: 19-Jul-2026 15:13:29 [---] -     Use at most 100% of the CPU time
+Jul 19 15:13:29 SableLinux boinc[60514]: 19-Jul-2026 15:13:29 [---] -     suspend if non-BOINC CPU load exceeds 100%
+Jul 19 15:13:29 SableLinux boinc[60514]: 19-Jul-2026 15:13:29 [---] -     max memory usage: 23.12 GB
+Jul 19 15:13:29 SableLinux boinc[60514]: 19-Jul-2026 15:13:29 [---] -  Suspend if running on batteries
+Jul 19 15:13:29 SableLinux boinc[60514]: 19-Jul-2026 15:13:29 [---] -  Store at least 0.10 days of work
+Jul 19 15:13:29 SableLinux boinc[60514]: 19-Jul-2026 15:13:29 [---] -  Store up to an additional 0.25 days of work
+Jul 19 15:13:29 SableLinux boinc[60514]: 19-Jul-2026 15:13:29 [---] -  max disk usage: 100.00 GB
+Jul 19 15:13:29 SableLinux boinc[60514]: 19-Jul-2026 15:13:29 [---] -  (to change preferences, visit a project web site or select 'Options / Computing preferences...' in the Manager)
+Jul 19 15:13:29 SableLinux boinc[60514]: 19-Jul-2026 15:13:29 [---] Setting up project and slot directories
+Jul 19 15:13:29 SableLinux boinc[60514]: 19-Jul-2026 15:13:29 [---] Checking active tasks
+Jul 19 15:13:29 SableLinux boinc[60514]: 19-Jul-2026 15:13:29 [---] Setting up GUI RPC socket
+Jul 19 15:13:29 SableLinux boinc[60514]: 19-Jul-2026 15:13:29 [---] Checking presence of 0 project files
+Jul 19 15:13:29 SableLinux boinc[60514]: 19-Jul-2026 15:13:29 [---] This computer is not attached to any projects
+Jul 19 15:13:29 SableLinux boinc[60514]: 19-Jul-2026 15:13:29 Initialization completed
+Jul 19 15:13:29 SableLinux boinc[60514]: 19-Jul-2026 15:13:29 [---] Currently BOINC uses legacy idle detection methods that might not work properly on all systems. Please consider installing a modern idle detection utility that works on Wayland and X11: https://github.com/jamescowens/idle_detect
+view_status=0
+
+=== CONTROLLED STOP ===
+Stopping BOINC...
+BOINC stopped cleanly.
+Manual-only boot policy preserved.
+stop_status=0
+
+=== FINAL SYSTEM STATE ===
+PASS: BOINC service is stopped
+PASS: no BOINC process remains
+PASS: GUI-RPC port is closed
+PASS: service remains disabled at boot
+final_status=0
+
+=== OVERALL VALIDATION ===
+PASS: boincctl installation and runtime validation complete

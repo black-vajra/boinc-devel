@@ -4,24 +4,33 @@
 POLL_INTERVAL=10      # seconds between checks
 CPU_THRESHOLD=20.0    # minimum %CPU to be considered a compute worker
 MIN_CORES=2           # preferred minimum; reduced fairly if the pool cannot satisfy it
-ROTATION_STEP=2       # cores to advance the window each cycle
-MAX_MANAGED_CORES=11     # logical CPU cores BOINC workers may use; remaining cores stay free
+ROTATION_STEP=4       # advance to the next four-CPU block
+MAX_MANAGED_CORES=4      # maximum BOINC CPUs active at once
+ROTATION_POOL_CORES=12   # rotate across CPUs 0-11; reserve CPUs 12-13
 # ──────────────────────────────────────────────────────────────────
 
 SYSTEM_CORES=$(nproc)
 
-if [ "$MAX_MANAGED_CORES" -gt 0 ] && [ "$MAX_MANAGED_CORES" -lt "$SYSTEM_CORES" ]; then
-    TOTAL_CORES="$MAX_MANAGED_CORES"
-else
-    TOTAL_CORES="$SYSTEM_CORES"
+if [ "$ROTATION_POOL_CORES" -gt "$SYSTEM_CORES" ]; then
+    echo "FAIL: rotation pool exceeds available system CPUs"
+    exit 1
 fi
+
+if [ "$MAX_MANAGED_CORES" -lt 1 ] ||
+   [ "$MAX_MANAGED_CORES" -gt "$ROTATION_POOL_CORES" ]; then
+    echo "FAIL: invalid maximum managed-core count"
+    exit 1
+fi
+
+TOTAL_CORES="$MAX_MANAGED_CORES"
 declare -A PINNED_PIDS
 ROTATION_COUNTER=0
 
 echo "========================================="
 echo " BOINC CPU Affinity Manager"
 echo " System cores: $SYSTEM_CORES"
-echo " Managed BOINC cores: $TOTAL_CORES"
+echo " Maximum active BOINC cores: $TOTAL_CORES"
+echo " Rotation pool: CPUs 0-$((ROTATION_POOL_CORES - 1))"
 echo " CPU threshold: ${CPU_THRESHOLD}%"
 echo " Poll interval: ${POLL_INTERVAL}s"
 echo " Core allocation: proportional to CPU usage"
@@ -204,7 +213,7 @@ assign_cores() {
         total_cpu=1
     fi
 
-    local core_cursor=$(( ROTATION_COUNTER % TOTAL_CORES ))
+    local core_cursor=$(( ROTATION_COUNTER % ROTATION_POOL_CORES ))
 
     mapfile -t allocations < <(
         calculate_core_counts \
@@ -259,7 +268,7 @@ assign_cores() {
 
         allocated=${allocations[$i]}
 
-        cpuset=$(make_core_list "$core_cursor" "$allocated" "$TOTAL_CORES")
+        cpuset=$(make_core_list "$core_cursor" "$allocated" "$ROTATION_POOL_CORES")
 
         echo "  $(date +%H:%M:%S) | '$name' (PID $pid, ${cpu}% CPU) → cores $cpuset ($allocated cores)"
 
@@ -267,7 +276,7 @@ assign_cores() {
         renice -n 19 -p "$pid" > /dev/null 2>&1
 
         PINNED_PIDS[$pid]="$cpuset"
-        core_cursor=$(( (core_cursor + allocated) % TOTAL_CORES ))
+        core_cursor=$(( (core_cursor + allocated) % ROTATION_POOL_CORES ))
     done
 
     echo ""

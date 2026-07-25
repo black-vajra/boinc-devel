@@ -1,14 +1,39 @@
-#!/bin/bash
-sudo pkill -x boinc 2>/dev/null
-sudo pkill boincmgr 2>/dev/null
-sleep 3
-sudo pkill -f "runargs.EVNTtoHITS" 2>/dev/null
-sudo pkill -f "EVNTtoHITS" 2>/dev/null
-sudo boinc --redirectio --dir /home/pepper &
-sleep 3
-boincmgr &
-##(cd /var/lib/boinc-client && boinccmd --set_run_mode auto)
-(cd /home/pepper && boinccmd --set_run_mode auto)
-(cd /home/pepper && boinccmd --set_gpu_mode auto)
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+DATA_DIR=/var/lib/boinc-client
+BOINCCMD=/usr/local/bin/boinccmd
+
+[[ "$(id -u)" -ne 0 ]] || {
+    echo "Run this as pepper, not root." >&2
+    exit 1
+}
+
+sudo systemctl start autofs.service
+sudo systemctl start docker.service containerd.service
+sudo systemctl start boinc-client.service
+
+for ((attempt=1; attempt<=60; attempt++)); do
+    if cd "$DATA_DIR" &&
+       sudo -u boinc "$BOINCCMD" --get_state >/dev/null 2>&1; then
+        break
+    fi
+    (( attempt == 60 )) && {
+        echo "BOINC RPC did not become ready." >&2
+        exit 1
+    }
+    sleep 1
+done
+
+cd "$DATA_DIR"
+sudo -u boinc "$BOINCCMD" --set_run_mode always 0
+sudo -u boinc "$BOINCCMD" --set_gpu_mode always 0
+sudo -u boinc "$BOINCCMD" --set_network_mode always 0
 sudo systemctl start boinc-affinity.service
-journalctl -fu boinc-affinity.service
+
+if ! pgrep -x boincmgr >/dev/null; then
+    (cd "$DATA_DIR" && /usr/local/bin/boincmgr >/tmp/boincmgr.log 2>&1 &)
+fi
+
+systemctl --no-pager --full status \
+    boinc-client.service boinc-affinity.service
