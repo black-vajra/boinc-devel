@@ -1,0 +1,36 @@
+Host: pots
+Platform: Kubuntu
+Kernel: 6.17.0-40-generic
+BOINC: 8.2.13
+
+Policy:
+  LHC project maximum concurrent jobs: 1
+  ATLAS maximum concurrent jobs: 1
+  CMS maximum concurrent jobs: 1
+  Theory maximum concurrent jobs: 1
+  leave_apps_in_memory: 0
+
+Before correction:
+  CMS tasks with live VBoxHeadless processes: 3
+  BOINC scheduler state: 2 executing, 1 suspended
+  Suspended VM still consumed CPU: yes
+  Approximate physical memory in use: 17.8 GiB
+  Affinity allocation: 1 + 2 + 1 cores
+
+After correction and clean restart:
+  Executing LHC tasks: 1
+  Live vboxwrapper processes: 1
+  Live VBoxHeadless processes: 1
+  Other CMS task PIDs: 0
+  boinc-client.service: active
+  boinc-affinity.service: active
+  KillMode: control-group
+  Stop timeout: 2 minutes
+
+BOINC startup log confirmed:
+  Max 1 concurrent jobs
+  ATLAS: Max 1 concurrent jobs
+  CMS: Max 1 concurrent jobs
+  Theory: Max 1 concurrent jobs
+
+Result: PASS

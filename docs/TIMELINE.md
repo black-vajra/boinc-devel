@@ -538,3 +538,25 @@ work, the manual `boincctl` layer, EliteBook validation, Z890 client/GPU
 validation, and the custom-kernel readiness checkpoint for rootless LHC
 containers. Ongoing Sable integration remains in `sablelinux/development` until
 validated and promoted under `SYNC_POLICY.md`.
+
+---
+
+## Phase 14 — LHC Project-Wide Concurrency Enforcement
+**July 25, 2026**
+
+Three CMS VirtualBox workloads were found simultaneously consuming CPU and
+approximately 17.8 GiB of memory. Two were executing according to BOINC; a
+third was nominally suspended but remained computationally active.
+
+The affinity manager constrained their combined execution to four logical CPUs,
+but divided that budget `1 + 2 + 1`. This demonstrated that CPU affinity cannot
+substitute for scheduler-level concurrency control.
+
+A project-wide `project_max_concurrent` value of 1 was deployed, together with
+explicit one-task limits for ATLAS, CMS, and Theory. The local preference
+`leave_apps_in_memory` was disabled. After a clean client restart, BOINC logged
+all four limits and resumed exactly one CMS workload.
+
+The live configuration is represented by
+`config/kubuntu/lhc-app_config.xml`. Future work will harden the affinity
+manager so multiple LHC workers are treated as a policy violation.

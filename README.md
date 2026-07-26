@@ -29,6 +29,7 @@ See [SYNC_POLICY.md](SYNC_POLICY.md) for the cross-repository workflow.
 ## Current Kubuntu operating state
 
 - LHC@home is the only attached project.
+- LHC@home is limited to one total task at a time across ATLAS, CMS, and Theory.
 - The authoritative BOINC data directory is `/var/lib/boinc-client`.
 - `boinc-client.service` owns the client process tree.
 - `boinc-affinity.service` rotates at most four active BOINC CPUs through
