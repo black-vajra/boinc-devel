@@ -6,7 +6,7 @@ CPU_THRESHOLD=20.0    # minimum %CPU to be considered a compute worker
 MIN_CORES=2           # preferred minimum; reduced fairly if the pool cannot satisfy it
 ROTATION_STEP=4       # advance to the next four-CPU block
 MAX_MANAGED_CORES=4      # maximum BOINC CPUs active at once
-ROTATION_POOL_CORES=12   # rotate across CPUs 0-11; reserve CPUs 12-13
+ROTATION_POOL_CORES=14   # rotate across CPUs 0-13; no CPUs permanently reserved
 # ──────────────────────────────────────────────────────────────────
 
 SYSTEM_CORES=$(nproc)
