@@ -104,5 +104,5 @@ PASS: From 10:04:03 through 10:05:03 EST, the manager reported one LHC
 task, three processes, and 43-45 threads across all seven four-CPU
 rotation positions, including wraparound.
 
-Pending: Verify manager exit after suspending the resumed LHC task,
-and automatic timer/manager shutdown when BOINC stops.
+PASS (user-confirmed): The manager exits after suspending LHC.
+PASS (user-confirmed): The timer and manager stop automatically when BOINC stops.
