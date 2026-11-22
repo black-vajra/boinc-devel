@@ -29,7 +29,7 @@ cd "$DATA_DIR"
 sudo -u boinc "$BOINCCMD" --set_run_mode always 0
 sudo -u boinc "$BOINCCMD" --set_gpu_mode always 0
 sudo -u boinc "$BOINCCMD" --set_network_mode always 0
-sudo systemctl start boinc-affinity.service
+sudo systemctl start lhc-affinity-watch.timer
 
 if ! pgrep -x boincmgr >/dev/null; then
     (cd "$DATA_DIR" && /usr/local/bin/boincmgr >/tmp/boincmgr.log 2>&1 &)

@@ -1,0 +1,10 @@
+[Unit]
+Description=Check for executing LHC@home tasks
+After=boinc-client.service
+Requisite=boinc-client.service
+PartOf=boinc-client.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/lhc_affinity_watch.sh
+TimeoutStartSec=25

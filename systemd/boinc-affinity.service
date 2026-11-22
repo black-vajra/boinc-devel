@@ -1,18 +1,18 @@
 [Unit]
-Description=BOINC CPU Affinity Manager
+Description=LHC@home CPU Affinity Manager
 After=boinc-client.service
+Requisite=boinc-client.service
+PartOf=boinc-client.service
 
 [Service]
 Type=simple
-ExecStartPre=/bin/sleep 5
+ExecCondition=/usr/bin/python3 /usr/local/libexec/boinc/lhc_affinity.py check
 ExecStart=/usr/local/bin/boinc_affinity.sh
-Restart=always
-RestartSec=15
-AmbientCapabilities=CAP_SYS_NICE
-CapabilityBoundingSet=CAP_SYS_NICE
+Restart=no
+TimeoutStopSec=15
+# Reading task working directories across UIDs is needed for VBox and Apptainer.
+AmbientCapabilities=CAP_SYS_NICE CAP_SYS_PTRACE CAP_DAC_READ_SEARCH
+CapabilityBoundingSet=CAP_SYS_NICE CAP_SYS_PTRACE CAP_DAC_READ_SEARCH
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=boinc-affinity
-
-[Install]
-WantedBy=multi-user.target

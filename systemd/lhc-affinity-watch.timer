@@ -1,0 +1,14 @@
+[Unit]
+Description=Check LHC@home while BOINC is running
+After=boinc-client.service
+Requisite=boinc-client.service
+PartOf=boinc-client.service
+
+[Timer]
+OnActiveSec=1
+OnUnitActiveSec=10
+AccuracySec=1s
+Unit=lhc-affinity-watch.service
+
+[Install]
+WantedBy=boinc-client.service
