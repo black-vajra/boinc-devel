@@ -15,3 +15,6 @@ notices/
 # Backup files
 *.bak
 *.orig
+
+__pycache__/
+*.pyc
