@@ -767,7 +767,11 @@ class SecureExecutorTests(unittest.TestCase):
 
         notification = receiver.recv(4096).decode()
 
-        self.assertIn("READY=1", notification)
+        self.assertEqual(
+            notification,
+            "READY=1" + chr(10) +
+            "STATUS=Authenticated executor operational",
+        )
 
     def test_authenticated_readiness(self):
         receiver, address = self.notification_receiver()
@@ -812,8 +816,16 @@ class SecureExecutorTests(unittest.TestCase):
         second = receiver.recv(4096).decode()
         elapsed = time.monotonic() - started
 
-        self.assertIn("WATCHDOG=1", first)
-        self.assertIn("WATCHDOG=1", second)
+        self.assertEqual(
+            first,
+            "WATCHDOG=1" + chr(10) +
+            "STATUS=Executor MONITORING",
+        )
+        self.assertEqual(
+            second,
+            "WATCHDOG=1" + chr(10) +
+            "STATUS=Executor MONITORING",
+        )
         self.assertGreater(elapsed, 0.75)
         self.assertLess(elapsed, 1.50)
 
@@ -865,6 +877,44 @@ class SecureExecutorTests(unittest.TestCase):
 
         self.assertGreaterEqual(lateness, 0)
         self.assertLess(lateness, 0.25)
+
+
+
+    def test_abstract_socket_notifications(self):
+        import secrets
+
+        name = (
+            "tg-notify-test-"
+            + str(os.getpid())
+            + "-"
+            + secrets.token_hex(8)
+        )
+
+        receiver = socket.socket(
+            socket.AF_UNIX,
+            socket.SOCK_DGRAM,
+        )
+
+        self.addCleanup(receiver.close)
+
+        receiver.bind(chr(0) + name)
+        receiver.settimeout(3)
+
+        self.start(notify_address="@" + name)
+        self.expect_ready(receiver)
+
+        heartbeat = receiver.recv(4096).decode()
+
+        self.assertEqual(
+            heartbeat,
+            "WATCHDOG=1" + chr(10) +
+            "STATUS=Executor MONITORING",
+        )
+
+        self.thermal_tx.close()
+        self.finish()
+
+        self.assertEqual(self.results, [2])
 
 
 if __name__ == "__main__":

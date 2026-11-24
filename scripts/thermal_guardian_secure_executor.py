@@ -102,7 +102,7 @@ def run(
             address = notify_address
 
             if address.startswith("@"):
-                address = "\\0" + address[1:]
+                address = chr(0) + address[1:]
 
             try:
                 with socket.socket(
@@ -131,7 +131,7 @@ def run(
                 return 2
 
             if not systemd_notify(
-                "READY=1\\n"
+                "READY=1" + chr(10) +
                 "STATUS=Authenticated executor operational"
             ):
                 return 2
@@ -173,7 +173,7 @@ def run(
                 and now >= next_heartbeat
             ):
                 notified = systemd_notify(
-                    "WATCHDOG=1\\n"
+                    "WATCHDOG=1" + chr(10) +
                     f"STATUS=Executor {decision.state.value}"
                 )
 
