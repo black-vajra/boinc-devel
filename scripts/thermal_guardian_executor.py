@@ -7,7 +7,7 @@ import socket
 import time
 
 
-def run(sock, countdown=7, override=30):
+def run(sock, countdown=7, override=30, action=None):
     # Import inside child so the existing tested controller is canonical.
     from thermal_guardian_controller import EmergencyController, State
     controller = EmergencyController(countdown, override)
@@ -22,13 +22,20 @@ def run(sock, countdown=7, override=30):
             sock.send(json.dumps(dict(kind=kind, at=time.monotonic(), **fields)).encode())
         except OSError:
             pass
+    def execute_shutdown(decision):
+        # Execute independently of notification delivery.
+        if action is not None:
+            action(decision)
+
+        emit('SIMULATED_SHUTDOWN', reason=decision.reason)
+        return 0
+
     emit('READY')
     while True:
         now = time.monotonic()
         decision = controller.update(now, level)
         if decision.shutdown_requested:
-            emit('SIMULATED_SHUTDOWN', reason=decision.reason)
-            return 0
+            return execute_shutdown(decision)
         timeout = None if decision.deadline is None else max(0, decision.deadline-now)
         events = selector.select(timeout)
         if not events:
@@ -47,8 +54,7 @@ def run(sock, countdown=7, override=30):
         now = time.monotonic()
         decision = controller.update(now, level)
         if decision.shutdown_requested:
-            emit('SIMULATED_SHUTDOWN', reason=decision.reason)
-            return 0
+            return execute_shutdown(decision)
         try:
             msg = json.loads(raw)
             if not isinstance(msg, dict):
@@ -65,8 +71,7 @@ def run(sock, countdown=7, override=30):
         except (ValueError, TypeError, UnicodeError):
             continue
         if decision.shutdown_requested:
-            emit('SIMULATED_SHUTDOWN', reason=decision.reason)
-            return 0
+            return execute_shutdown(decision)
         emit('STATE', state=decision.state.value, deadline=decision.deadline)
 
 
