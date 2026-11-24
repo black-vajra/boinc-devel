@@ -40,6 +40,7 @@ class SecureExecutorTests(unittest.TestCase):
         ):
             self.addCleanup(sock.close)
 
+        self.token = None
         self.actions = []
         self.results = []
         self.errors = []
@@ -93,12 +94,33 @@ class SecureExecutorTests(unittest.TestCase):
             value,
         )
 
-    def operator(self, value):
-        self.send(
-            self.operator_tx,
-            "OPERATOR",
-            value,
+    def receive_session(self):
+        self.operator_tx.settimeout(3)
+
+        event = json.loads(
+            self.operator_tx.recv(4096)
         )
+
+        self.assertEqual(
+            event["kind"],
+            "EMERGENCY_SESSION",
+        )
+
+        self.assertEqual(len(event["token"]), 64)
+
+        self.token = event["token"]
+
+        return event
+
+    def operator(self, value):
+        if self.token is None:
+            self.receive_session()
+
+        self.operator_tx.send(json.dumps({
+            "kind": "OPERATOR",
+            "value": value,
+            "token": self.token,
+        }).encode())
 
     def finish(self, timeout=5):
         self.thread.join(timeout)
@@ -173,7 +195,7 @@ class SecureExecutorTests(unittest.TestCase):
     def test_operator_yes_without_emergency(self):
         self.start()
 
-        self.operator("YES")
+        self.send(self.operator_tx, "OPERATOR", "YES")
 
         time.sleep(0.10)
 
@@ -390,6 +412,103 @@ class SecureExecutorTests(unittest.TestCase):
         self.assertEqual(
             self.actions[0][1],
             "Absolute critical temperature",
+        )
+
+
+
+    def test_queued_unauthorized_no_cannot_override(self):
+        self.send(self.operator_tx, "OPERATOR", "NO")
+        self.thermal("EMERGENCY")
+
+        self.start()
+
+        self.finish()
+
+        self.assertEqual(self.results, [0])
+        self.assertEqual(
+            self.actions[0][1],
+            "Emergency countdown expired",
+        )
+
+    def test_queued_unauthorized_yes_cannot_shutdown(self):
+        self.send(self.operator_tx, "OPERATOR", "YES")
+        self.thermal("EMERGENCY")
+
+        self.start()
+
+        self.finish()
+
+        self.assertEqual(self.results, [0])
+        self.assertEqual(
+            self.actions[0][1],
+            "Emergency countdown expired",
+        )
+
+    def test_wrong_token_cannot_override(self):
+        self.start()
+
+        self.thermal("EMERGENCY")
+        session = self.receive_session()
+
+        wrong = (
+            "0" if session["token"][0] != "0" else "1"
+        ) + session["token"][1:]
+
+        self.operator_tx.send(json.dumps({
+            "kind": "OPERATOR",
+            "value": "NO",
+            "token": wrong,
+        }).encode())
+
+        self.finish()
+
+        self.assertEqual(self.results, [0])
+        self.assertEqual(
+            self.actions[0][1],
+            "Emergency countdown expired",
+        )
+
+    def test_valid_token_authorizes_immediate_shutdown(self):
+        self.start(countdown=2)
+
+        self.thermal("EMERGENCY")
+        self.receive_session()
+
+        self.operator("YES")
+
+        self.finish()
+
+        self.assertEqual(self.results, [0])
+        self.assertEqual(
+            self.actions[0][1],
+            "Operator requested immediate shutdown",
+        )
+
+    def test_override_publishes_authoritative_deadline(self):
+        self.start(countdown=1, override=2)
+
+        self.thermal("EMERGENCY")
+        initial = self.receive_session()
+
+        self.operator("NO")
+        updated = self.receive_session()
+
+        self.assertEqual(updated["state"], "OVERRIDE")
+        self.assertEqual(
+            initial["token"],
+            updated["token"],
+        )
+        self.assertGreater(
+            updated["deadline"],
+            initial["deadline"],
+        )
+
+        self.finish()
+
+        self.assertEqual(self.results, [0])
+        self.assertEqual(
+            self.actions[0][1],
+            "Manual intervention period expired",
         )
 
 

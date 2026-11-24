@@ -108,8 +108,23 @@ def decode_message(packet, channel):
     if not isinstance(message, dict):
         raise ProtocolError("Message must be an object")
 
-    if set(message) != {"kind", "value"}:
+    expected_fields = {"kind", "value"}
+
+    if channel == "operator-session":
+        expected_fields.add("token")
+
+    if set(message) != expected_fields:
         raise ProtocolError("Unexpected message fields")
+
+    if channel == "operator-session":
+        token = message["token"]
+
+        if (
+            not isinstance(token, str)
+            or len(token) != 64
+            or any(c not in "0123456789abcdef" for c in token)
+        ):
+            raise ProtocolError("Invalid emergency token")
 
     kind = message["kind"]
     value = message["value"]
@@ -129,7 +144,7 @@ def decode_message(packet, channel):
         if value not in THERMAL_LEVELS:
             raise ProtocolError("Invalid thermal level")
 
-    elif channel == "operator":
+    elif channel in ("operator", "operator-session"):
         if kind != "OPERATOR":
             raise AuthorizationError(
                 "Operator channel authority exceeded"

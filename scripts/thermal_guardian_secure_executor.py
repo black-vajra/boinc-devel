@@ -6,6 +6,8 @@ Development implementation.
 No actual shutdown authority.
 """
 
+import json
+import secrets
 import selectors
 import time
 
@@ -52,6 +54,7 @@ def run(
     )
 
     thermal_level = "NORMAL"
+    emergency_token = None
 
     decision = controller.update(
         time.monotonic(),
@@ -83,6 +86,23 @@ def run(
                 selectors.EVENT_READ,
                 channel,
             )
+
+        def publish_emergency(decision):
+            event = {
+                "kind": "EMERGENCY_SESSION",
+                "token": emergency_token,
+                "deadline": decision.deadline,
+                "state": decision.state.value,
+            }
+
+            try:
+                operator_socket.send(
+                    json.dumps(event).encode()
+                )
+            except OSError:
+                # Failure to notify the desktop must
+                # never delay or cancel the deadline.
+                pass
 
         while True:
 
@@ -139,7 +159,11 @@ def run(
                 try:
                     message = receive_message(
                         sock,
-                        channel,
+                        (
+                            "operator-session"
+                            if channel == "operator"
+                            else channel
+                        ),
                     )
 
                 except BlockingIOError:
@@ -174,13 +198,35 @@ def run(
                         thermal_level,
                     )
 
-                elif decision.deadline is not None:
+                    if (
+                        emergency_token is None
+                        and decision.deadline is not None
+                        and not decision.shutdown_requested
+                    ):
+                        emergency_token = secrets.token_hex(32)
+                        publish_emergency(decision)
+
+                elif (
+                    decision.deadline is not None
+                    and emergency_token is not None
+                    and secrets.compare_digest(
+                        message["token"],
+                        emergency_token,
+                    )
+                ):
+                    previous_deadline = decision.deadline
 
                     decision = controller.update(
                         time.monotonic(),
                         thermal_level,
                         operator=message["value"],
                     )
+
+                    if (
+                        not decision.shutdown_requested
+                        and decision.deadline != previous_deadline
+                    ):
+                        publish_emergency(decision)
 
                 if decision.shutdown_requested:
                     return execute(decision)
