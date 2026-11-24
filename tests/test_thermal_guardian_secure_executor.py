@@ -735,5 +735,137 @@ class SecureExecutorTests(unittest.TestCase):
             os.close(fd)
 
 
+
+    def notification_receiver(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+
+        address = str(
+            Path(directory.name) / "notify.sock"
+        )
+
+        receiver = socket.socket(
+            socket.AF_UNIX,
+            socket.SOCK_DGRAM,
+        )
+
+        self.addCleanup(receiver.close)
+
+        receiver.bind(address)
+        receiver.settimeout(3)
+
+        return receiver, address
+
+    def expect_ready(self, receiver):
+        self.thermal_tx.settimeout(3)
+
+        event = json.loads(
+            self.thermal_tx.recv(4096)
+        )
+
+        self.assertEqual(event["kind"], "READY")
+
+        notification = receiver.recv(4096).decode()
+
+        self.assertIn("READY=1", notification)
+
+    def test_authenticated_readiness(self):
+        receiver, address = self.notification_receiver()
+
+        self.start(notify_address=address)
+        self.expect_ready(receiver)
+
+        self.thermal_tx.close()
+        self.finish()
+
+        self.assertEqual(self.results, [2])
+
+    def test_unauthorized_peer_cannot_announce_readiness(self):
+        receiver, address = self.notification_receiver()
+
+        with self.assertRaises(AuthorizationError):
+            run(
+                self.thermal_rx,
+                self.operator_rx,
+                thermal_uid=os.getuid() + 1,
+                operator_uid=os.getuid(),
+                action=self.action,
+                notify_address=address,
+            )
+
+        receiver.settimeout(0.20)
+
+        with self.assertRaises(socket.timeout):
+            receiver.recv(4096)
+
+        self.assertFalse(self.actions)
+
+    def test_idle_executor_heartbeat(self):
+        receiver, address = self.notification_receiver()
+
+        self.start(notify_address=address)
+        self.expect_ready(receiver)
+
+        first = receiver.recv(4096).decode()
+        started = time.monotonic()
+
+        second = receiver.recv(4096).decode()
+        elapsed = time.monotonic() - started
+
+        self.assertIn("WATCHDOG=1", first)
+        self.assertIn("WATCHDOG=1", second)
+        self.assertGreater(elapsed, 0.75)
+        self.assertLess(elapsed, 1.50)
+
+        self.thermal_tx.close()
+        self.finish()
+
+        self.assertEqual(self.results, [2])
+
+    def test_notification_failure_during_monitoring(self):
+        receiver, address = self.notification_receiver()
+
+        self.start(notify_address=address)
+        self.expect_ready(receiver)
+
+        receiver.close()
+
+        self.finish()
+
+        self.assertEqual(self.results, [2])
+        self.assertFalse(self.actions)
+
+    def test_notification_failure_during_emergency(self):
+        receiver, address = self.notification_receiver()
+
+        self.start(
+            notify_address=address,
+            countdown=2,
+        )
+
+        self.expect_ready(receiver)
+
+        self.thermal("EMERGENCY")
+        session = self.receive_session()
+
+        receiver.close()
+
+        self.finish()
+
+        self.assertEqual(self.results, [0])
+
+        self.assertEqual(
+            self.actions[0][1],
+            "Emergency countdown expired",
+        )
+
+        lateness = (
+            self.actions[0][0] - session["deadline"]
+        )
+
+        self.assertGreaterEqual(lateness, 0)
+        self.assertLess(lateness, 0.25)
+
+
 if __name__ == "__main__":
     unittest.main()

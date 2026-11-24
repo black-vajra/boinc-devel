@@ -33,6 +33,7 @@ def run(
     override=30,
     thermal_pid=None,
     operator_pid=None,
+    notify_address=None,
 ):
     if not callable(action):
         raise TypeError("Action must be callable")
@@ -94,6 +95,49 @@ def run(
                 channel,
             )
 
+        def systemd_notify(message):
+            if notify_address is None:
+                return True
+
+            address = notify_address
+
+            if address.startswith("@"):
+                address = "\\0" + address[1:]
+
+            try:
+                with socket.socket(
+                    socket.AF_UNIX,
+                    socket.SOCK_DGRAM,
+                ) as notifier:
+
+                    notifier.setblocking(False)
+                    notifier.sendto(
+                        message.encode(),
+                        address,
+                    )
+
+                return True
+
+            except OSError:
+                return False
+
+        if notify_address is not None:
+            try:
+                thermal_socket.send(json.dumps({
+                    "kind": "READY",
+                }).encode())
+
+            except OSError:
+                return 2
+
+            if not systemd_notify(
+                "READY=1\\n"
+                "STATUS=Authenticated executor operational"
+            ):
+                return 2
+
+        next_heartbeat = time.monotonic()
+
         def publish_emergency(decision):
             event = {
                 "kind": "EMERGENCY_SESSION",
@@ -122,12 +166,43 @@ def run(
             if decision.shutdown_requested:
                 return execute(decision)
 
+            now = time.monotonic()
+
+            if (
+                notify_address is not None
+                and now >= next_heartbeat
+            ):
+                notified = systemd_notify(
+                    "WATCHDOG=1\\n"
+                    f"STATUS=Executor {decision.state.value}"
+                )
+
+                if (
+                    not notified
+                    and decision.deadline is None
+                ):
+                    return 2
+
+                next_heartbeat = now + 1.0
+
             timeout = None
 
-            if decision.deadline is not None:
+            if notify_address is not None:
                 timeout = max(
                     0,
+                    next_heartbeat - time.monotonic(),
+                )
+
+            if decision.deadline is not None:
+                remaining = max(
+                    0,
                     decision.deadline - time.monotonic(),
+                )
+
+                timeout = (
+                    remaining
+                    if timeout is None
+                    else min(timeout, remaining)
                 )
 
             events = selector.select(timeout)
