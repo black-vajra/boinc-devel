@@ -145,6 +145,12 @@ def run(
                 except BlockingIOError:
                     continue
 
+                except (
+                    ProtocolError,
+                    AuthorizationError,
+                ):
+                    continue
+
                 except (EOFError, OSError):
 
                     selector.unregister(sock)
@@ -157,12 +163,6 @@ def run(
 
                     # Losing either communication channel
                     # cannot cancel an active emergency.
-                    continue
-
-                except (
-                    ProtocolError,
-                    AuthorizationError,
-                ):
                     continue
 
                 if channel == "thermal":

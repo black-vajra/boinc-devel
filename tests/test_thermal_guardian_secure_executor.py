@@ -326,5 +326,72 @@ class SecureExecutorTests(unittest.TestCase):
         self.assertEqual(self.results, [3])
 
 
+
+    def test_thermal_channel_survives_authority_violation(self):
+        self.start()
+
+        self.send(self.thermal_tx, "OPERATOR", "NO")
+        self.thermal("CRITICAL")
+
+        self.finish()
+
+        self.assertEqual(self.results, [0])
+        self.assertEqual(len(self.actions), 1)
+        self.assertEqual(
+            self.actions[0][1],
+            "Absolute critical temperature",
+        )
+
+    def test_operator_channel_survives_authority_violation(self):
+        self.start(countdown=2)
+
+        self.send(self.operator_tx, "THERMAL", "CRITICAL")
+
+        time.sleep(0.10)
+
+        self.thermal("EMERGENCY")
+
+        time.sleep(0.10)
+
+        self.operator("YES")
+
+        self.finish()
+
+        self.assertEqual(self.results, [0])
+        self.assertEqual(
+            self.actions[0][1],
+            "Operator requested immediate shutdown",
+        )
+
+    def test_empty_thermal_packet_preserves_channel(self):
+        self.start()
+
+        self.thermal_tx.send(b"")
+        self.thermal("CRITICAL")
+
+        self.finish()
+
+        self.assertEqual(self.results, [0])
+        self.assertEqual(
+            self.actions[0][1],
+            "Absolute critical temperature",
+        )
+
+    def test_empty_packet_during_countdown_preserves_escalation(self):
+        self.start(countdown=2)
+
+        self.thermal("EMERGENCY")
+        self.thermal_tx.send(b"")
+        self.thermal("CRITICAL")
+
+        self.finish()
+
+        self.assertEqual(self.results, [0])
+        self.assertEqual(
+            self.actions[0][1],
+            "Absolute critical temperature",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

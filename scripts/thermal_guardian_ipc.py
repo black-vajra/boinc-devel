@@ -5,7 +5,9 @@
 No shutdown authority or hardware access.
 """
 
+import array
 import json
+import os
 import socket
 import struct
 
@@ -143,14 +145,59 @@ def decode_message(packet, channel):
 
 
 def receive_message(sock, channel):
-    packet, ancillary, flags, address = sock.recvmsg(
-        MAX_PACKET
+    # Linux attaches credentials to actual packets,
+    # including zero-length SOCK_SEQPACKET messages.
+    sock.setsockopt(
+        socket.SOL_SOCKET,
+        socket.SO_PASSCRED,
+        1,
     )
+
+    packet, ancillary, flags, address = sock.recvmsg(
+        MAX_PACKET,
+        socket.CMSG_SPACE(struct.calcsize("3i")),
+        socket.MSG_CMSG_CLOEXEC,
+    )
+
+    credentials_present = False
+    unexpected_ancillary = False
+
+    for level, kind, data in ancillary:
+
+        if (
+            level == socket.SOL_SOCKET
+            and kind == socket.SCM_CREDENTIALS
+        ):
+            credentials_present = True
+
+        elif (
+            level == socket.SOL_SOCKET
+            and kind == socket.SCM_RIGHTS
+        ):
+            # Close any descriptors received through
+            # unsolicited ancillary data.
+            descriptors = array.array("i")
+            usable = len(data) - len(data) % descriptors.itemsize
+            descriptors.frombytes(data[:usable])
+
+            for fd in descriptors:
+                os.close(fd)
+
+            unexpected_ancillary = True
+
+        else:
+            unexpected_ancillary = True
 
     if flags & (socket.MSG_TRUNC | socket.MSG_CTRUNC):
         raise ProtocolError("Truncated message")
 
+    if unexpected_ancillary:
+        raise ProtocolError("Unexpected ancillary data")
+
     if not packet:
+        if credentials_present:
+            raise ProtocolError("Empty packet")
+
         raise EOFError("Peer disconnected")
 
     return decode_message(packet, channel)
