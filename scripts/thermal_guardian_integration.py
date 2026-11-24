@@ -149,6 +149,7 @@ def main():
                 "--temperature", "101",
                 "--threshold", "100",
                 "--seconds", "7",
+                "--deadline", str(deadline),
                 "--alarm",
                 str(ROOT / "assets/sounds/thermal-emergency.wav"),
             ])
@@ -197,6 +198,27 @@ def main():
 
                 if event.get("deadline") is not None:
                     expected_deadline = event["deadline"]
+
+                if event["state"] == "OVERRIDE" and not args.no_gui:
+
+                    ui = subprocess.Popen([
+                        PYTHON,
+                        str(SCRIPTS / "thermal_guardian_ui.py"),
+                        "--sensor", "GPU junction",
+                        "--temperature", "101",
+                        "--threshold", "100",
+                        "--seconds", "30",
+                        "--deadline", str(expected_deadline),
+                        "--override",
+                    ])
+
+                    processes.append(ui)
+                    response_sent = False
+
+                    print(
+                        "PASS: Manual intervention window launched",
+                        flush=True,
+                    )
 
             elif event["kind"] == "SIMULATED_SHUTDOWN":
 

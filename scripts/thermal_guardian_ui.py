@@ -41,9 +41,17 @@ class EmergencyDialog(QDialog):
 
         self.args = args
         self.alarm = None
-        self.deadline = time.monotonic() + args.seconds
+        self.deadline = (
+            args.deadline
+            if args.deadline is not None
+            else time.monotonic() + args.seconds
+        )
 
-        self.setWindowTitle("SYSTEM THERMAL EMERGENCY")
+        self.setWindowTitle(
+            "MANUAL INTERVENTION ACTIVE"
+            if args.override
+            else "SYSTEM THERMAL EMERGENCY"
+        )
         self.setWindowFlags(
             Qt.Dialog
             | Qt.WindowStaysOnTopHint
@@ -83,7 +91,11 @@ class EmergencyDialog(QDialog):
         layout.setSpacing(16)
         layout.setContentsMargins(24, 24, 24, 24)
 
-        title = QLabel("SYSTEM THERMAL EMERGENCY")
+        title = QLabel(
+            "MANUAL INTERVENTION ACTIVE"
+            if args.override
+            else "SYSTEM THERMAL EMERGENCY"
+        )
         title.setAlignment(Qt.AlignCenter)
         title.setStyleSheet("""
             color: #ff4444;
@@ -122,7 +134,11 @@ class EmergencyDialog(QDialog):
         self.progress.setTextVisible(False)
         layout.addWidget(self.progress)
 
-        question = QLabel("Continue emergency shutdown?")
+        question = QLabel(
+            "Take immediate corrective action."
+            if args.override
+            else "Continue emergency shutdown?"
+        )
         question.setAlignment(Qt.AlignCenter)
         question.setStyleSheet("font-size: 18px; font-weight: bold;")
         layout.addWidget(question)
@@ -154,11 +170,19 @@ class EmergencyDialog(QDialog):
         )
 
         buttons.addWidget(yes)
-        buttons.addWidget(no)
+        if not args.override:
+            buttons.addWidget(no)
+        else:
+            no.hide()
         layout.addLayout(buttons)
 
         footer = QLabel(
-            "No response will result in automatic shutdown."
+            (
+                "Automatic shutdown remains active. "
+                "This period cannot be extended."
+                if args.override
+                else "No response will result in automatic shutdown."
+            )
         )
         footer.setAlignment(Qt.AlignCenter)
         footer.setStyleSheet("color: #bbbbbb; font-size: 13px;")
@@ -169,7 +193,8 @@ class EmergencyDialog(QDialog):
         self.timer.start(50)
 
         self.update_countdown()
-        self.start_alarm()
+        if not args.override and time.monotonic() < self.deadline:
+            self.start_alarm()
 
     def start_alarm(self):
         try:
@@ -189,7 +214,11 @@ class EmergencyDialog(QDialog):
         remaining = max(0, self.deadline - time.monotonic())
 
         self.countdown.setText(
-            f"SHUTDOWN IN {math.ceil(remaining)}"
+            (
+                f"{math.ceil(remaining)} SECONDS REMAINING"
+                if self.args.override
+                else f"SHUTDOWN IN {math.ceil(remaining)}"
+            )
         )
 
         self.progress.setValue(int(remaining * 1000))
@@ -218,6 +247,8 @@ def main():
     parser.add_argument("--temperature", type=float, default=101.0)
     parser.add_argument("--threshold", type=float, default=100.0)
     parser.add_argument("--seconds", type=int, default=7)
+    parser.add_argument("--deadline", type=float, default=None)
+    parser.add_argument("--override", action="store_true")
     parser.add_argument("--alarm", type=Path, default=DEFAULT_ALARM)
 
     parser.add_argument(
@@ -230,6 +261,16 @@ def main():
 
     if not 1 <= args.seconds <= 60:
         parser.error("Countdown must be between 1 and 60 seconds")
+
+    if args.deadline is not None:
+        if not math.isfinite(args.deadline):
+            parser.error("Invalid monotonic deadline")
+
+        if args.deadline <= time.monotonic():
+            return EXIT_TIMEOUT
+
+        if args.deadline - time.monotonic() > args.seconds:
+            parser.error("Deadline exceeds permitted duration")
 
     app = QApplication(sys.argv[:1])
     dialog = EmergencyDialog(args)
