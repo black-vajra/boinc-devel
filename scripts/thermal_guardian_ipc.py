@@ -1,0 +1,156 @@
+#!/usr/bin/env python3
+
+"""Thermal Guardian local IPC validation.
+
+No shutdown authority or hardware access.
+"""
+
+import json
+import socket
+import struct
+
+from dataclasses import dataclass
+
+
+MAX_PACKET = 4096
+
+THERMAL_LEVELS = frozenset({
+    "NORMAL",
+    "WARN",
+    "EMERGENCY",
+    "CRITICAL",
+    "FAULT",
+})
+
+OPERATOR_RESPONSES = frozenset({
+    "YES",
+    "NO",
+})
+
+
+class AuthorizationError(PermissionError):
+    pass
+
+
+class ProtocolError(ValueError):
+    pass
+
+
+@dataclass(frozen=True)
+class PeerCredentials:
+    pid: int
+    uid: int
+    gid: int
+
+
+def peer_credentials(sock):
+    size = struct.calcsize("3i")
+
+    raw = sock.getsockopt(
+        socket.SOL_SOCKET,
+        socket.SO_PEERCRED,
+        size,
+    )
+
+    pid, uid, gid = struct.unpack("3i", raw)
+
+    return PeerCredentials(pid, uid, gid)
+
+
+def authorize_peer(sock, expected_uid, expected_pid=None):
+    credentials = peer_credentials(sock)
+
+    if credentials.uid != expected_uid:
+        raise AuthorizationError(
+            "Unauthorized peer UID"
+        )
+
+    if (
+        expected_pid is not None
+        and credentials.pid != expected_pid
+    ):
+        raise AuthorizationError(
+            "Unauthorized peer PID"
+        )
+
+    return credentials
+
+
+def unique_fields(pairs):
+    result = {}
+
+    for key, value in pairs:
+        if key in result:
+            raise ProtocolError("Duplicate message field")
+
+        result[key] = value
+
+    return result
+
+
+def decode_message(packet, channel):
+    if not isinstance(packet, bytes):
+        raise ProtocolError("Invalid packet type")
+
+    if not packet or len(packet) > MAX_PACKET:
+        raise ProtocolError("Invalid packet length")
+
+    try:
+        message = json.loads(
+            packet.decode("utf-8"),
+            object_pairs_hook=unique_fields,
+        )
+    except (ValueError, UnicodeError, RecursionError) as error:
+        raise ProtocolError("Malformed message") from error
+
+    if not isinstance(message, dict):
+        raise ProtocolError("Message must be an object")
+
+    if set(message) != {"kind", "value"}:
+        raise ProtocolError("Unexpected message fields")
+
+    kind = message["kind"]
+    value = message["value"]
+
+    if not isinstance(kind, str):
+        raise ProtocolError("Invalid message kind")
+
+    if not isinstance(value, str):
+        raise ProtocolError("Invalid message value")
+
+    if channel == "thermal":
+        if kind != "THERMAL":
+            raise AuthorizationError(
+                "Thermal channel authority exceeded"
+            )
+
+        if value not in THERMAL_LEVELS:
+            raise ProtocolError("Invalid thermal level")
+
+    elif channel == "operator":
+        if kind != "OPERATOR":
+            raise AuthorizationError(
+                "Operator channel authority exceeded"
+            )
+
+        if value not in OPERATOR_RESPONSES:
+            raise ProtocolError("Invalid operator response")
+
+    else:
+        raise AuthorizationError("Unknown channel")
+
+    return message
+
+
+def receive_message(sock, channel):
+    packet, ancillary, flags, address = sock.recvmsg(
+        MAX_PACKET
+    )
+
+    if flags & (socket.MSG_TRUNC | socket.MSG_CTRUNC):
+        raise ProtocolError("Truncated message")
+
+    if not packet:
+        raise EOFError("Peer disconnected")
+
+    return decode_message(packet, channel)
