@@ -3,6 +3,8 @@
 import json
 import os
 import socket
+import subprocess
+import tempfile
 import sys
 import threading
 import time
@@ -15,7 +17,12 @@ sys.path.insert(
     str(Path(__file__).resolve().parents[1] / "scripts"),
 )
 
-from thermal_guardian_ipc import AuthorizationError
+from thermal_guardian_ipc import (
+    AuthorizationError,
+    ProtocolError,
+    authorize_peer,
+    receive_message,
+)
 from thermal_guardian_secure_executor import run
 
 
@@ -39,6 +46,16 @@ class SecureExecutorTests(unittest.TestCase):
             self.operator_tx,
         ):
             self.addCleanup(sock.close)
+
+        for receiver in (
+            self.thermal_rx,
+            self.operator_rx,
+        ):
+            receiver.setsockopt(
+                socket.SOL_SOCKET,
+                socket.SO_PASSCRED,
+                1,
+            )
 
         self.token = None
         self.actions = []
@@ -510,6 +527,212 @@ class SecureExecutorTests(unittest.TestCase):
             self.actions[0][1],
             "Manual intervention period expired",
         )
+
+
+
+    def child_send(self, sock, message):
+        subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                (
+                    "import socket,sys;"
+                    "s=socket.socket(fileno=int(sys.argv[1]));"
+                    "s.send(sys.argv[2].encode());"
+                    "s.close()"
+                ),
+                str(sock.fileno()),
+                json.dumps(message),
+            ],
+            pass_fds=(sock.fileno(),),
+            timeout=3,
+            check=True,
+        )
+
+    def test_inherited_thermal_descriptor_rejected(self):
+        self.child_send(
+            self.thermal_tx,
+            {"kind": "THERMAL", "value": "CRITICAL"},
+        )
+
+        self.thermal("EMERGENCY")
+        self.start()
+
+        self.finish()
+
+        self.assertEqual(self.results, [0])
+        self.assertEqual(
+            self.actions[0][1],
+            "Emergency countdown expired",
+        )
+
+    def test_inherited_operator_descriptor_rejected(self):
+        self.start(countdown=2)
+
+        self.thermal("EMERGENCY")
+        self.receive_session()
+
+        self.child_send(
+            self.operator_tx,
+            {
+                "kind": "OPERATOR",
+                "value": "NO",
+                "token": self.token,
+            },
+        )
+
+        self.finish()
+
+        self.assertEqual(self.results, [0])
+        self.assertEqual(
+            self.actions[0][1],
+            "Emergency countdown expired",
+        )
+
+    def test_legitimate_sender_survives_impersonation(self):
+        self.child_send(
+            self.thermal_tx,
+            {"kind": "THERMAL", "value": "NORMAL"},
+        )
+
+        self.thermal("CRITICAL")
+        self.start()
+
+        self.finish()
+
+        self.assertEqual(self.results, [0])
+        self.assertEqual(
+            self.actions[0][1],
+            "Absolute critical temperature",
+        )
+
+    def test_real_cross_process_connection(self):
+        with tempfile.TemporaryDirectory() as directory:
+            address = str(Path(directory) / "control.sock")
+
+            with socket.socket(
+                socket.AF_UNIX,
+                socket.SOCK_SEQPACKET,
+            ) as listener:
+
+                listener.setsockopt(
+                    socket.SOL_SOCKET,
+                    socket.SO_PASSCRED,
+                    1,
+                )
+
+                listener.bind(address)
+                listener.listen(1)
+                listener.settimeout(3)
+
+                with subprocess.Popen(
+                    [
+                        sys.executable,
+                        "-c",
+                        (
+                            "import socket,sys;"
+                            "s=socket.socket(socket.AF_UNIX,"
+                            "socket.SOCK_SEQPACKET);"
+                            "s.connect(sys.argv[1]);"
+                            "s.send(b'{\"kind\":\"THERMAL\","
+                            "\"value\":\"NORMAL\"}');"
+                            "s.close()"
+                        ),
+                        address,
+                        json.dumps({
+                            "kind": "THERMAL",
+                            "value": "NORMAL",
+                        }),
+                    ]
+                ) as child:
+
+                    connection, _ = listener.accept()
+
+                    with connection:
+                        connection.settimeout(3)
+
+                        peer = authorize_peer(
+                            connection,
+                            os.getuid(),
+                            child.pid,
+                        )
+
+                        self.assertNotEqual(
+                            peer.pid, os.getpid()
+                        )
+
+                        with self.assertRaises(
+                            AuthorizationError
+                        ):
+                            authorize_peer(
+                                connection,
+                                os.getuid(),
+                                os.getpid(),
+                            )
+
+                        message = receive_message(
+                            connection,
+                            "thermal",
+                            expected_peer=peer,
+                        )
+
+                        self.assertEqual(
+                            message["value"],
+                            "NORMAL",
+                        )
+
+                    self.assertEqual(
+                        child.wait(timeout=3), 0
+                    )
+
+    def test_unsolicited_descriptor_rejected_without_leak(self):
+        import array
+
+        peer = authorize_peer(
+            self.thermal_rx,
+            os.getuid(),
+            os.getpid(),
+        )
+
+        fd = os.open("/dev/null", os.O_RDONLY)
+
+        try:
+            before = len(os.listdir("/proc/self/fd"))
+
+            self.thermal_tx.sendmsg(
+                [b'{"kind":"THERMAL","value":"NORMAL"}'],
+                [
+                    (
+                        socket.SOL_SOCKET,
+                        socket.SCM_RIGHTS,
+                        array.array("i", [fd]),
+                    )
+                ],
+            )
+
+            with self.assertRaises(ProtocolError):
+                receive_message(
+                    self.thermal_rx,
+                    "thermal",
+                    expected_peer=peer,
+                )
+
+            after = len(os.listdir("/proc/self/fd"))
+
+            self.assertEqual(before, after)
+
+            self.thermal("NORMAL")
+
+            message = receive_message(
+                self.thermal_rx,
+                "thermal",
+                expected_peer=peer,
+            )
+
+            self.assertEqual(message["value"], "NORMAL")
+
+        finally:
+            os.close(fd)
 
 
 if __name__ == "__main__":

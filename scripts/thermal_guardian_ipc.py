@@ -159,7 +159,7 @@ def decode_message(packet, channel):
     return message
 
 
-def receive_message(sock, channel):
+def receive_message(sock, channel, *, expected_peer=None):
     # Linux attaches credentials to actual packets,
     # including zero-length SOCK_SEQPACKET messages.
     sock.setsockopt(
@@ -175,6 +175,8 @@ def receive_message(sock, channel):
     )
 
     credentials_present = False
+    credentials = None
+    malformed_credentials = False
     unexpected_ancillary = False
 
     for level, kind, data in ancillary:
@@ -183,6 +185,16 @@ def receive_message(sock, channel):
             level == socket.SOL_SOCKET
             and kind == socket.SCM_CREDENTIALS
         ):
+            if (
+                credentials_present
+                or len(data) != struct.calcsize("3i")
+            ):
+                malformed_credentials = True
+            else:
+                credentials = PeerCredentials(
+                    *struct.unpack("3i", data)
+                )
+
             credentials_present = True
 
         elif (
@@ -214,5 +226,19 @@ def receive_message(sock, channel):
             raise ProtocolError("Empty packet")
 
         raise EOFError("Peer disconnected")
+
+    if malformed_credentials:
+        raise ProtocolError("Malformed sender credentials")
+
+    if expected_peer is not None:
+        if credentials is None:
+            raise AuthorizationError(
+                "Missing sender credentials"
+            )
+
+        if credentials != expected_peer:
+            raise AuthorizationError(
+                "Message sender credentials mismatch"
+            )
 
     return decode_message(packet, channel)

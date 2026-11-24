@@ -9,6 +9,7 @@ No actual shutdown authority.
 import json
 import secrets
 import selectors
+import socket
 import time
 
 from thermal_guardian_controller import EmergencyController
@@ -36,13 +37,13 @@ def run(
     if not callable(action):
         raise TypeError("Action must be callable")
 
-    authorize_peer(
+    thermal_peer = authorize_peer(
         thermal_socket,
         thermal_uid,
         thermal_pid,
     )
 
-    authorize_peer(
+    operator_peer = authorize_peer(
         operator_socket,
         operator_uid,
         operator_pid,
@@ -79,6 +80,12 @@ def run(
             (thermal_socket, "thermal"),
             (operator_socket, "operator"),
         ):
+            sock.setsockopt(
+                socket.SOL_SOCKET,
+                socket.SO_PASSCRED,
+                1,
+            )
+
             sock.setblocking(False)
 
             selector.register(
@@ -163,6 +170,11 @@ def run(
                             "operator-session"
                             if channel == "operator"
                             else channel
+                        ),
+                        expected_peer=(
+                            thermal_peer
+                            if channel == "thermal"
+                            else operator_peer
                         ),
                     )
 
