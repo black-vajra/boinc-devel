@@ -34,9 +34,14 @@ def run(
     thermal_pid=None,
     operator_pid=None,
     notify_address=None,
+    deadline_registration=None,
 ):
     if not callable(action):
         raise TypeError("Action must be callable")
+
+    if (deadline_registration is not None
+            and not callable(deadline_registration)):
+        raise TypeError("Invalid deadline registration callback")
 
     thermal_peer = authorize_peer(
         thermal_socket,
@@ -57,6 +62,7 @@ def run(
 
     thermal_level = "NORMAL"
     emergency_token = None
+    registration_ok = False
 
     decision = controller.update(
         time.monotonic(),
@@ -139,6 +145,15 @@ def run(
         next_heartbeat = time.monotonic()
 
         def publish_emergency(decision):
+            registered = True
+            if deadline_registration is not None:
+                try:
+                    registered = bool(
+                        deadline_registration(decision)
+                    )
+                except Exception:
+                    registered = False
+
             event = {
                 "kind": "EMERGENCY_SESSION",
                 "token": emergency_token,
@@ -154,6 +169,8 @@ def run(
                 # Failure to notify the desktop must
                 # never delay or cancel the deadline.
                 pass
+
+            return registered
 
         while True:
 
@@ -291,7 +308,7 @@ def run(
                         and not decision.shutdown_requested
                     ):
                         emergency_token = secrets.token_hex(32)
-                        publish_emergency(decision)
+                        registration_ok = publish_emergency(decision)
 
                 elif (
                     decision.deadline is not None
@@ -301,6 +318,13 @@ def run(
                         emergency_token,
                     )
                 ):
+                    if (
+                        message["value"] == "NO"
+                        and deadline_registration is not None
+                        and not registration_ok
+                    ):
+                        continue
+
                     previous_deadline = decision.deadline
 
                     decision = controller.update(
@@ -313,7 +337,11 @@ def run(
                         not decision.shutdown_requested
                         and decision.deadline != previous_deadline
                     ):
-                        publish_emergency(decision)
+                        registration_ok = publish_emergency(decision)
+                        if not registration_ok:
+                            decision = controller.request_shutdown(
+                                "Independent override registration failed"
+                            )
 
                 if decision.shutdown_requested:
                     return execute(decision)

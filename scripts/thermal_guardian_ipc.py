@@ -153,6 +153,18 @@ def decode_message(packet, channel):
         if value not in OPERATOR_RESPONSES:
             raise ProtocolError("Invalid operator response")
 
+    elif channel == "deadline-registration":
+        if kind != "REGISTER":
+            raise AuthorizationError(
+                "Deadline registration authority exceeded"
+            )
+
+    elif channel == "deadline-ack":
+        if kind != "ACK":
+            raise AuthorizationError(
+                "Deadline acknowledgement authority exceeded"
+            )
+
     else:
         raise AuthorizationError("Unknown channel")
 
