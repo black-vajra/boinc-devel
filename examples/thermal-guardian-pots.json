@@ -1,0 +1,71 @@
+{
+    "hostname": "pots",
+    "poll_interval": 1,
+    "history_seconds": 300,
+    "status_interval": 10,
+    "emergency_countdown": 7,
+    "manual_override_seconds": 30,
+
+    "sensors": [
+        {
+            "name": "CPU package and cores",
+            "driver": "coretemp",
+            "device": "coretemp.0",
+            "labels": ["Package id 0", "Core *"],
+            "expected_count": 15,
+            "warning": 80,
+            "emergency": 90,
+            "critical": 100
+        },
+        {
+            "name": "GPU edge",
+            "driver": "amdgpu",
+            "device": "0000:03:00.0",
+            "labels": ["edge"],
+            "expected_count": 1,
+            "warning": 75,
+            "emergency": 85,
+            "critical": 95
+        },
+        {
+            "name": "GPU junction",
+            "driver": "amdgpu",
+            "device": "0000:03:00.0",
+            "labels": ["junction"],
+            "expected_count": 1,
+            "warning": 90,
+            "emergency": 100,
+            "critical": 105
+        },
+        {
+            "name": "GPU memory",
+            "driver": "amdgpu",
+            "device": "0000:03:00.0",
+            "labels": ["mem"],
+            "expected_count": 1,
+            "warning": 85,
+            "emergency": 95,
+            "critical": 100
+        },
+        {
+            "name": "PNY NVMe",
+            "driver": "nvme",
+            "device": "0000:04:00.0",
+            "labels": ["Composite"],
+            "expected_count": 1,
+            "warning": 65,
+            "emergency": 75,
+            "critical": 80
+        },
+        {
+            "name": "Samsung NVMe",
+            "driver": "nvme",
+            "device": "0000:82:00.0",
+            "labels": ["Composite"],
+            "expected_count": 1,
+            "warning": 65,
+            "emergency": 75,
+            "critical": 80
+        }
+    ]
+}
