@@ -51,6 +51,7 @@ def main():
         "--stall-worker", action="store_true"
     )
 
+    parser.add_argument("--stall-diagnostics", action="store_true")
     args = parser.parse_args()
 
     workdir = Path(tempfile.mkdtemp(
@@ -107,6 +108,22 @@ def main():
             "PASS: Authoritative deadline established",
             flush=True,
         )
+
+        evidence = workdir / "diagnostics"
+        evidence.mkdir(mode=0o700)
+        payload = workdir / "diagnostic-input.json"
+        payload.write_text(json.dumps({
+            "trigger": {"simulated": True, "sensor": "GPU junction",
+                        "temperature": 101, "threshold": 100,
+                        "deadline": deadline, "level": "EMERGENCY"},
+            "history": []
+        }))
+        diagnostic = subprocess.Popen([
+            PYTHON, str(SCRIPTS / "thermal_guardian_diagnostics.py"),
+            "--directory", str(evidence), "--input", str(payload),
+            *(["--stall"] if args.stall_diagnostics else []),
+        ])
+        processes.append(diagnostic)
 
         # Separate persistence worker. Filesystem operations
         # cannot block the independent executor.
@@ -273,6 +290,11 @@ def main():
             raise RuntimeError("Persistent latch not established")
 
         print("PASS: Persistent emergency latch")
+        for name in ("trigger", "thermal-history", "collection-status"):
+            if not (evidence / (name + ".json")).is_file():
+                raise RuntimeError(f"Missing diagnostic evidence: {name}")
+        print("PASS: Essential diagnostic evidence retained")
+        print("Diagnostic status:", (evidence / "collection-status.json").read_text().strip())
         print("PASS: Integration simulation completed")
 
         return 0
