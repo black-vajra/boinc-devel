@@ -1,0 +1,12 @@
+[Unit]
+Description=Thermal Guardian supervision test
+
+[Service]
+Type=notify
+NotifyAccess=main
+ExecStart=/usr/bin/python3 -u %h/boinc-devel/tests/systemd/mock_guardian.py
+WatchdogSec=5s
+WatchdogSignal=SIGKILL
+TimeoutStartSec=10s
+TimeoutStopSec=3s
+Restart=no

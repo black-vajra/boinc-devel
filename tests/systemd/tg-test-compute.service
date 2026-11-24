@@ -1,0 +1,10 @@
+[Unit]
+Description=Harmless dependent computation test
+BindsTo=tg-test-guardian.service
+After=tg-test-guardian.service
+
+[Service]
+Type=exec
+ExecStart=/usr/bin/sleep infinity
+Restart=no
+TimeoutStopSec=3s
