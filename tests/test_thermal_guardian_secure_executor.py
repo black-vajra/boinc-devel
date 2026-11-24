@@ -1,0 +1,330 @@
+"""Authenticated emergency executor integration tests."""
+
+import json
+import os
+import socket
+import sys
+import threading
+import time
+import unittest
+
+from pathlib import Path
+
+sys.path.insert(
+    0,
+    str(Path(__file__).resolve().parents[1] / "scripts"),
+)
+
+from thermal_guardian_ipc import AuthorizationError
+from thermal_guardian_secure_executor import run
+
+
+class SecureExecutorTests(unittest.TestCase):
+
+    def setUp(self):
+        self.thermal_rx, self.thermal_tx = socket.socketpair(
+            socket.AF_UNIX,
+            socket.SOCK_SEQPACKET,
+        )
+
+        self.operator_rx, self.operator_tx = socket.socketpair(
+            socket.AF_UNIX,
+            socket.SOCK_SEQPACKET,
+        )
+
+        for sock in (
+            self.thermal_rx,
+            self.thermal_tx,
+            self.operator_rx,
+            self.operator_tx,
+        ):
+            self.addCleanup(sock.close)
+
+        self.actions = []
+        self.results = []
+        self.errors = []
+
+    def action(self, decision):
+        self.actions.append(
+            (time.monotonic(), decision.reason)
+        )
+
+    def start(self, **options):
+        settings = {
+            "thermal_uid": os.getuid(),
+            "operator_uid": os.getuid(),
+            "action": self.action,
+            "countdown": 1,
+            "override": 2,
+        }
+
+        settings.update(options)
+
+        def worker():
+            try:
+                result = run(
+                    self.thermal_rx,
+                    self.operator_rx,
+                    **settings,
+                )
+
+                self.results.append(result)
+
+            except Exception as error:
+                self.errors.append(error)
+
+        self.thread = threading.Thread(
+            target=worker,
+            daemon=True,
+        )
+
+        self.thread.start()
+
+    def send(self, sock, kind, value):
+        sock.send(json.dumps({
+            "kind": kind,
+            "value": value,
+        }).encode())
+
+    def thermal(self, value):
+        self.send(
+            self.thermal_tx,
+            "THERMAL",
+            value,
+        )
+
+    def operator(self, value):
+        self.send(
+            self.operator_tx,
+            "OPERATOR",
+            value,
+        )
+
+    def finish(self, timeout=5):
+        self.thread.join(timeout)
+
+        self.assertFalse(
+            self.thread.is_alive(),
+            "Executor failed to terminate",
+        )
+
+        self.assertFalse(self.errors)
+
+    def test_normal_countdown(self):
+        self.start()
+
+        started = time.monotonic()
+
+        self.thermal("EMERGENCY")
+
+        self.finish()
+
+        self.assertEqual(self.results, [0])
+        self.assertEqual(len(self.actions), 1)
+
+        elapsed = self.actions[0][0] - started
+
+        self.assertGreaterEqual(elapsed, 0.99)
+        self.assertLess(elapsed, 1.30)
+
+    def test_unauthorized_thermal_uid(self):
+        with self.assertRaises(AuthorizationError):
+            run(
+                self.thermal_rx,
+                self.operator_rx,
+                thermal_uid=os.getuid() + 1,
+                operator_uid=os.getuid(),
+                action=self.action,
+            )
+
+        self.assertFalse(self.actions)
+
+    def test_unauthorized_operator_uid(self):
+        with self.assertRaises(AuthorizationError):
+            run(
+                self.thermal_rx,
+                self.operator_rx,
+                thermal_uid=os.getuid(),
+                operator_uid=os.getuid() + 1,
+                action=self.action,
+            )
+
+        self.assertFalse(self.actions)
+
+    def test_operator_cannot_inject_critical(self):
+        self.start()
+
+        self.send(
+            self.operator_tx,
+            "THERMAL",
+            "CRITICAL",
+        )
+
+        time.sleep(0.10)
+
+        self.assertFalse(self.actions)
+
+        self.thermal_tx.close()
+
+        self.finish()
+
+        self.assertEqual(self.results, [2])
+
+    def test_operator_yes_without_emergency(self):
+        self.start()
+
+        self.operator("YES")
+
+        time.sleep(0.10)
+
+        self.assertFalse(self.actions)
+
+        self.thermal_tx.close()
+
+        self.finish()
+
+        self.assertEqual(self.results, [2])
+
+    def test_thermal_channel_cannot_override(self):
+        self.start()
+
+        started = time.monotonic()
+
+        self.thermal("EMERGENCY")
+
+        self.send(
+            self.thermal_tx,
+            "OPERATOR",
+            "NO",
+        )
+
+        self.finish()
+
+        elapsed = self.actions[0][0] - started
+
+        self.assertLess(elapsed, 1.30)
+        self.assertEqual(self.results, [0])
+
+    def test_malformed_packets_during_emergency(self):
+        self.start()
+
+        self.thermal("EMERGENCY")
+
+        self.thermal_tx.send(b"not-json")
+        self.operator_tx.send(b"\xff")
+        self.operator_tx.send(b"x" * 8192)
+
+        self.finish()
+
+        self.assertEqual(self.results, [0])
+        self.assertEqual(len(self.actions), 1)
+
+    def test_supervisor_disconnection(self):
+        self.start()
+
+        self.thermal("EMERGENCY")
+        self.thermal_tx.close()
+
+        self.finish()
+
+        self.assertEqual(self.results, [0])
+        self.assertEqual(len(self.actions), 1)
+
+    def test_operator_disconnection(self):
+        self.start()
+
+        self.thermal("EMERGENCY")
+        self.operator_tx.close()
+
+        self.finish()
+
+        self.assertEqual(self.results, [0])
+        self.assertEqual(len(self.actions), 1)
+
+    def test_critical_escalation_during_override(self):
+        self.start()
+
+        self.thermal("EMERGENCY")
+
+        time.sleep(0.10)
+
+        self.operator("NO")
+
+        time.sleep(0.10)
+
+        self.assertFalse(self.actions)
+
+        started = time.monotonic()
+
+        self.thermal("CRITICAL")
+
+        self.finish()
+
+        self.assertLess(
+            self.actions[0][0] - started,
+            0.30,
+        )
+
+        self.assertEqual(self.results, [0])
+
+    def test_repeated_override_not_renewed(self):
+        self.start()
+
+        self.thermal("EMERGENCY")
+
+        time.sleep(0.10)
+
+        started = time.monotonic()
+
+        self.operator("NO")
+
+        for _ in range(5):
+            time.sleep(0.20)
+            self.operator("NO")
+
+        self.finish()
+
+        elapsed = self.actions[0][0] - started
+
+        self.assertGreaterEqual(elapsed, 1.95)
+        self.assertLess(elapsed, 2.30)
+
+    def test_message_flood_does_not_delay_deadline(self):
+        self.start()
+
+        started = time.monotonic()
+
+        self.thermal("EMERGENCY")
+
+        self.operator_tx.setblocking(False)
+
+        until = started + 1.20
+
+        while time.monotonic() < until:
+            try:
+                self.operator_tx.send(b"invalid")
+            except BlockingIOError:
+                time.sleep(0.001)
+
+        self.finish()
+
+        elapsed = self.actions[0][0] - started
+
+        self.assertGreaterEqual(elapsed, 0.99)
+        self.assertLess(elapsed, 1.30)
+
+    def test_shutdown_action_failure(self):
+        def failed_action(decision):
+            raise RuntimeError("Simulated backend failure")
+
+        self.start(action=failed_action)
+
+        self.thermal("CRITICAL")
+
+        self.finish()
+
+        self.assertEqual(self.results, [3])
+
+
+if __name__ == "__main__":
+    unittest.main()
