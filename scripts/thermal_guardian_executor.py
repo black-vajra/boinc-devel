@@ -25,7 +25,24 @@ def run(sock, countdown=7, override=30, action=None):
     def execute_shutdown(decision):
         # Execute independently of notification delivery.
         if action is not None:
-            action(decision)
+            try:
+                result = action(decision)
+
+                if result is not None and not result.accepted:
+                    emit(
+                        'SHUTDOWN_FAILED',
+                        reason=decision.reason,
+                        error='All shutdown commands failed',
+                    )
+                    return 3
+
+            except Exception as error:
+                emit(
+                    'SHUTDOWN_FAILED',
+                    reason=decision.reason,
+                    error=str(error),
+                )
+                return 3
 
         emit('SIMULATED_SHUTDOWN', reason=decision.reason)
         return 0
