@@ -165,6 +165,18 @@ def decode_message(packet, channel):
                 "Deadline acknowledgement authority exceeded"
             )
 
+    elif channel == "executor-status":
+        if kind == "ACTION_COMPLETE":
+            if value != "ACCEPTED":
+                raise ProtocolError("Invalid action completion value")
+        elif kind == "ACTION_FAILED":
+            if not value or len(value) > 256:
+                raise ProtocolError("Invalid action failure value")
+        else:
+            raise AuthorizationError(
+                "Executor status channel authority exceeded"
+            )
+
     else:
         raise AuthorizationError("Unknown channel")
 

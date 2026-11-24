@@ -22,6 +22,42 @@ from thermal_guardian_ipc import (
 )
 
 
+def report_action_result(thermal_socket, action, decision):
+    """Run the emergency action and report its outcome to the supervisor."""
+    try:
+        result = action(decision)
+        if result is not None and not result.accepted:
+            message = {
+                "kind": "ACTION_FAILED",
+                "value": "Action rejected",
+            }
+            status = 3
+        else:
+            message = {
+                "kind": "ACTION_COMPLETE",
+                "value": "ACCEPTED",
+            }
+            status = 0
+    except Exception as error:
+        detail = f"{type(error).__name__}: {error}"[:256]
+        message = {
+            "kind": "ACTION_FAILED",
+            "value": detail or "Action failed",
+        }
+        status = 3
+
+    try:
+        thermal_socket.send(json.dumps(message).encode())
+    except OSError:
+        # The supervisor may disconnect after issuing an emergency.
+        # Its disappearance must not cancel or relabel a successfully
+        # executed emergency action. The integrated runtime separately
+        # requires supervisor acknowledgement before declaring acceptance.
+        return status
+
+    return status
+
+
 def run(
     thermal_socket,
     operator_socket,
@@ -70,16 +106,11 @@ def run(
     )
 
     def execute(decision):
-        try:
-            result = action(decision)
-
-            if result is not None and not result.accepted:
-                return 3
-
-        except Exception:
-            return 3
-
-        return 0
+        return report_action_result(
+            thermal_socket,
+            action,
+            decision,
+        )
 
     with selectors.DefaultSelector() as selector:
 
