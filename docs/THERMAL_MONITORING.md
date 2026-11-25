@@ -162,3 +162,63 @@ The affinity script's core rotation provides passive thermal management as a sid
 of its primary purpose (even hardware wear). It is not a substitute for adequate case
 airflow and CPU cooling. Sustained temperatures above 80°C under normal load suggest a
 cooling problem that rotation alone cannot compensate for.
+
+---
+
+## Thermal Guardian production deployment — 2026-11-25
+
+Thermal Guardian has been deployed on Pots as a production hardware
+monitor with an independently supervised emergency deadline guardian.
+
+### Production services
+
+- `thermal-guardian.service`
+- `thermal-guardian-deadline.service`
+- `thermal-guardian-poweroff.service`
+
+Both monitor and deadline guardian are enabled. The monitor requires
+the independent guardian and the services operate in separate systemd
+units and cgroups.
+
+### Shutdown authority
+
+The production shutdown authority marker is:
+
+`/etc/thermal-guardian/ENABLE-SHUTDOWN`
+
+A narrowly scoped sudoers rule authorizes the thermal-guardian account
+to start only `thermal-guardian-poweroff.service`.
+
+The marker is root-owned and readable by the thermal-guardian group.
+Sudoers syntax and effective authorization were validated.
+
+### Monitoring
+
+The production monitor reports `MONITORING`.
+
+The observed sensor inventory contains 29 sensors with zero reported
+faults in the recorded monitoring snapshot.
+
+CPU, AMD GPU, and NVMe temperature telemetry are operational.
+
+AMD GPU fan RPM is available through amdgpu hwmon. The motherboard
+IT87952 controller reports zero RPM on its three fan inputs despite
+exposing PWM controls. Fan-controller investigation is deferred to
+a separate workstream; no PWM modifications were made.
+
+### Acceptance boundary
+
+Production deployment and activation are complete.
+
+The final combined hardware-triggered shutdown acceptance remains
+pending. It will exercise the complete event-to-poweroff chain using
+a temporary GPU threshold and Asteroids@home workload after the
+holiday.
+
+The UPS software integration must be inspected before that test.
+
+See:
+
+- `docs/testing/thermal-guardian-production-integration.md`
+- `docs/testing/thermal-guardian-production-activation-pots.md`
+- `docs/testing/thermal-guardian-hardware-triggered-shutdown-test-plan-pots.md`
